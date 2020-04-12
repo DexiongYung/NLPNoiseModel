@@ -40,7 +40,7 @@ class Decoder(nn.Module):
         self.sigmoid = nn.Sigmoid()
         self.fc1 = nn.Linear(hidden_sz, input_sz)
         self.drop_out = nn.Dropout(drop_out)
-        self.softmax = nn.LogSoftmax(dim=0)
+        self.softmax = nn.LogSoftmax(dim=2)
 
     def forward(self, input: torch.Tensor, hidden: torch.Tensor):
         embedded_input = self.embed(input)
