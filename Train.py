@@ -105,9 +105,9 @@ def iter_train(dl: DataLoader, path: str = "Checkpoints/"):
                 plot_losses(
                     all_losses, x_label=f"Iteration of Batch Size: {BATCH_SZ}", y_label="NLLosss", filename=NAME)
                 torch.save({'weights': encoder.state_dict()},
-                           os.path.join(f"{path}{NAME}_encoder.path.tar"))
+                           f"{path}{NAME}_encoder.path.tar")
                 torch.save({'weights': decoder.state_dict()},
-                           os.path.join(f"{path}{NAME}_decoder.path.tar"))
+                           f"{path}{NAME}_decoder.path.tar")
 
 decoder = Decoder(NUM_CHAR, HIDDEN_SZ, PAD_IDX, NUM_LAYERS, EMBED_DIM).to(DEVICE)
 encoder = Encoder(NUM_CHAR, HIDDEN_SZ, PAD_IDX, NUM_LAYERS, EMBED_DIM).to(DEVICE)
