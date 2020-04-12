@@ -24,7 +24,7 @@ parser.add_argument('--num_iter', help='Number of iterations',
 parser.add_argument('--num_layers', help='Number of layers',
                     nargs='?', default=5, type=int)
 parser.add_argument('--train_file', help='File to train on',
-                    nargs='?', default='Data/fb_moe.tsv', type=str)
+                    nargs='?', default='Data/fb_moe.csv', type=str)
 parser.add_argument('--column', help='Column header of data',
                     nargs='?', default='name', type=str)
 parser.add_argument('--print', help='Print every',
@@ -120,7 +120,7 @@ criterion = nn.NLLLoss(ignore_index=PAD_IDX)
 decoder_opt = torch.optim.Adam(decoder.parameters(), lr=LR)
 encoder_opt = torch.optim.Adam(encoder.parameters(), lr=LR)
 
-df = pd.read_csv(TRAIN_FILE, sep = '\t')
+df = pd.read_csv(TRAIN_FILE)
 ds = WordDataset(df)
 dl = DataLoader(ds, batch_size=BATCH_SZ, shuffle=True)
 
