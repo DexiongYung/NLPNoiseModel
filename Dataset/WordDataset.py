@@ -5,10 +5,7 @@ import numpy
 
 class WordDataset(Dataset):
     def __init__(self, df: DataFrame):
-        df['x'] = df['x'].str.encode('ascii', 'ignore').str.decode('ascii')
-        df['y'] = df['y'].str.encode('ascii', 'ignore').str.decode('ascii')
-        df['x'].replace('', numpy.nan, inplace=True)
-        self.data_frame = df.dropna()
+        self.data_frame = df
 
     def __len__(self):
         return len(self.data_frame)
