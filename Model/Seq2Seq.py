@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 from Constants import *
 
+
 class Encoder(nn.Module):
     def __init__(self, input_sz: int, hidden_sz: int, in_pad_idx: int, num_layer: int, embed_sz: int):
         super(Encoder, self).__init__()
@@ -10,7 +11,7 @@ class Encoder(nn.Module):
         self.num_layer = num_layer
         self.embed = nn.Embedding(input_sz, embed_sz, in_pad_idx)
         self.lstm = nn.LSTM(embed_sz, hidden_sz, num_layers=num_layer)
-    
+
     def forward(self, input: torch.Tensor, non_padded_len: torch.Tensor, hidden: torch.Tensor = None):
         batch_sz = input.shape[1]
         embedded_input = self.embed(input)
@@ -21,13 +22,15 @@ class Encoder(nn.Module):
         _, hidden = self.lstm.forward(pps_input, hidden)
 
         return hidden
-    
+
     def init_hidden(self, batch_sz: int):
         return (torch.zeros(self.num_layer, batch_sz, self.hidden_sz).to(DEVICE),
                 torch.zeros(self.num_layer, batch_sz, self.hidden_sz).to(DEVICE))
 
+
 class Decoder(nn.Module):
-    def __init__(self, input_sz: int, hidden_sz: int, in_pad_idx: int, num_layer: int, embed_sz: int, drop_out: float = 0.1):
+    def __init__(self, input_sz: int, hidden_sz: int, in_pad_idx: int, num_layer: int, embed_sz: int,
+                 drop_out: float = 0.1):
         super(Decoder, self).__init__()
         self.input_sz = input_sz
         self.hidden_sz = hidden_sz

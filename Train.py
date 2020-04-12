@@ -48,6 +48,7 @@ COLUMN = args.column
 PRINTS = args.print
 CLIP = 1
 
+
 def train(x: list):
     encoder_opt.zero_grad()
     decoder_opt.zero_grad()
@@ -60,7 +61,7 @@ def train(x: list):
     src_x = list(
         map(lambda s: [char for char in s] + [PAD] * ((src_max_len - len(s))), x[1]))
     trg_x = list(map(lambda s: [char for char in s] +
-                    [EOS] + [PAD] * ((trg_max_len - len(s)) - 1), x[0]))
+                               [EOS] + [PAD] * ((trg_max_len - len(s)) - 1), x[0]))
 
     src = indexTensor(src_x, src_max_len, CHARACTERS).to(DEVICE)
     trg = targetsTensor(trg_x, trg_max_len, CHARACTERS).to(DEVICE)
@@ -79,7 +80,7 @@ def train(x: list):
 
         for idx in range(len(names)):
             names[idx] += CHARACTERS[best_index[0][idx].item()]
-        
+
         lstm_input = trg[i].unsqueeze(0)
 
     loss.backward()
@@ -87,6 +88,7 @@ def train(x: list):
     decoder_opt.step()
 
     return names, loss.item()
+
 
 def iter_train(dl: DataLoader, path: str = "Checkpoints/"):
     all_losses = []
@@ -108,6 +110,7 @@ def iter_train(dl: DataLoader, path: str = "Checkpoints/"):
                            f"{path}{NAME}_encoder.path.tar")
                 torch.save({'weights': decoder.state_dict()},
                            f"{path}{NAME}_decoder.path.tar")
+
 
 decoder = Decoder(NUM_CHAR, HIDDEN_SZ, PAD_IDX, NUM_LAYERS, EMBED_DIM).to(DEVICE)
 encoder = Encoder(NUM_CHAR, HIDDEN_SZ, PAD_IDX, NUM_LAYERS, EMBED_DIM).to(DEVICE)
