@@ -12,7 +12,7 @@ from Dataset.WordDataset import WordDataset
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--name', help='Name of the Session',
-                    nargs='?', default='first', type=str)
+                    nargs='?', default='noise', type=str)
 parser.add_argument('--hidden_size', help='Size of the hidden layer of LSTM',
                     nargs='?', default=256, type=int)
 parser.add_argument('--embed_dim', help='Size of embedding dimension',
