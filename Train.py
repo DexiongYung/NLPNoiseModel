@@ -69,25 +69,17 @@ def train(x: list):
 
     hidden = encoder.forward(src, lng)
 
-    names = [''] * batch_sz
-
     lstm_input = targetsTensor([SOS] * batch_sz, 1, CHARACTERS).to(DEVICE)
     for i in range(trg.shape[0]):
         lstm_probs, hidden = decoder.forward(lstm_input, hidden)
-        best_index = torch.argmax(lstm_probs, dim=2)
-
         loss += criterion(lstm_probs[0], trg[i])
-
-        for idx in range(len(names)):
-            names[idx] += CHARACTERS[best_index[0][idx].item()]
-
         lstm_input = trg[i].unsqueeze(0)
 
     loss.backward()
     encoder_opt.step()
     decoder_opt.step()
 
-    return names, loss.item()
+    return loss.item()
 
 
 def iter_train(dl: DataLoader, path: str = "Checkpoints/"):
@@ -98,7 +90,7 @@ def iter_train(dl: DataLoader, path: str = "Checkpoints/"):
     for iter in range(1, ITER + 1):
         for x in dl:
             count = count + 1
-            name, loss = train(x)
+            loss = train(x)
             total_loss += loss
 
             if count % PRINTS == 0:
@@ -110,6 +102,7 @@ def iter_train(dl: DataLoader, path: str = "Checkpoints/"):
                            f"{path}{NAME}_encoder.path.tar")
                 torch.save({'weights': decoder.state_dict()},
                            f"{path}{NAME}_decoder.path.tar")
+
 
 def test(x: list):
     encoder.eval()
@@ -141,12 +134,17 @@ def test(x: list):
 
     return name
 
-decoder = Decoder(NUM_CHAR, HIDDEN_SZ, PAD_IDX, NUM_LAYERS, EMBED_DIM).to(DEVICE)
-encoder = Encoder(NUM_CHAR, HIDDEN_SZ, PAD_IDX, NUM_LAYERS, EMBED_DIM).to(DEVICE)
+
+decoder = Decoder(NUM_CHAR, HIDDEN_SZ, PAD_IDX,
+                  NUM_LAYERS, EMBED_DIM).to(DEVICE)
+encoder = Encoder(NUM_CHAR, HIDDEN_SZ, PAD_IDX,
+                  NUM_LAYERS, EMBED_DIM).to(DEVICE)
 
 if args.continue_training == 1:
-    encoder.load_state_dict(torch.load(f'Checkpoints/{NAME}_encoder.path.tar')['weights'])
-    decoder.load_state_dict(torch.load(f'Checkpoints/{NAME}_decoder.path.tar')['weights'])
+    encoder.load_state_dict(torch.load(
+        f'Checkpoints/{NAME}_encoder.path.tar')['weights'])
+    decoder.load_state_dict(torch.load(
+        f'Checkpoints/{NAME}_decoder.path.tar')['weights'])
 
 criterion = nn.NLLLoss(ignore_index=PAD_IDX)
 decoder_opt = torch.optim.Adam(decoder.parameters(), lr=LR)
