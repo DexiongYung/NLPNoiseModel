@@ -123,7 +123,11 @@ def test(x: list):
     lstm_input = targetsTensor([SOS], 1, CHARACTERS).to(DEVICE)
     for i in range(10):
         decoder_out, hidden = decoder.forward(lstm_input, hidden)
-        lstm_probs = torch.softmax(decoder_out.reshape(NUM_CHAR), dim = 0)
+        decoder_out = decoder_out.reshape(NUM_CHAR)
+        # min_idx = decoder_out.argmin().item()
+        # decoder_out[min_idx] = decoder_out[min_idx] - 51
+        lstm_probs = torch.softmax(decoder_out, dim = 0)
+        # sample = lstm_probs.argmax().item()
         sample = int(torch.distributions.categorical.Categorical(lstm_probs).sample().item())
         sampled_char = CHARACTERS[sample]
 
