@@ -18,4 +18,4 @@ for i in range(len(df)):
     data.append([df.iloc[i].x, df.iloc[i].y])    
 
 df = pd.DataFrame(data, columns = ['Noised', 'Correct'])     
-df.to_csv('Data/fb_moe2.csv')
+df.to_csv('Data/fb_moe2.csv', index=False)
