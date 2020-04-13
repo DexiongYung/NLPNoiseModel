@@ -121,16 +121,17 @@ def test(x: list):
 
     lstm_input = targetsTensor([SOS], 1, CHARACTERS).to(DEVICE)
     for i in range(10):
-        lstm_probs, hidden = decoder.forward(lstm_input, hidden)
-        best_index = torch.argmax(lstm_probs, dim=2)
-        best_char = CHARACTERS[best_index]
+        decoder_out, hidden = decoder.forward(lstm_input, hidden)
+        lstm_probs = torch.softmax(decoder_out.reshape(NUM_CHAR), dim = 0)
+        sample = int(torch.distributions.categorical.Categorical(lstm_probs).sample().item())
+        sampled_char = CHARACTERS[sample]
 
-        if best_char is EOS:
+        if sampled_char is EOS:
             break
         else:
-            name = name + best_char
+            name = name + sampled_char
 
-        lstm_input = targetsTensor([best_char], 1, CHARACTERS).to(DEVICE)
+        lstm_input = targetsTensor([sampled_char], 1, CHARACTERS).to(DEVICE)
 
     return name
 
