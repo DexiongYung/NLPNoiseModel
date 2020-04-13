@@ -3,6 +3,7 @@ import torch
 
 df = pd.read_csv('Data/fb_moe.csv')
 
+data = []
 for i in range(len(df)):
     sample = int(torch.distributions.Bernoulli(torch.FloatTensor([.8])).sample())
 
@@ -14,4 +15,7 @@ for i in range(len(df)):
         if sample_1 == 1:
             df.iloc[i].x = str(df.iloc[i].x).capitalize()
 
+    data.append([df.iloc[i].x, df.iloc[i].y])    
+
+df = pd.DataFrame(data, columns = ['Noised', 'Correct'])     
 df.to_csv('Data/fb_moe2.csv')
