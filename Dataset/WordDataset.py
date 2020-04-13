@@ -5,7 +5,7 @@ import numpy
 
 class WordDataset(Dataset):
     def __init__(self, df: DataFrame):
-        self.data_frame = df
+        self.data_frame = df.dropna()
 
     def __len__(self):
         return len(self.data_frame)
