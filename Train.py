@@ -124,11 +124,9 @@ def test(x: list):
     for i in range(10):
         decoder_out, hidden = decoder.forward(lstm_input, hidden)
         decoder_out = decoder_out.reshape(NUM_CHAR)
-        # min_idx = decoder_out.argmin().item()
-        # decoder_out[min_idx] = decoder_out[min_idx] - 51
-        lstm_probs = torch.softmax(decoder_out, dim = 0)
-        # sample = lstm_probs.argmax().item()
-        sample = int(torch.distributions.categorical.Categorical(lstm_probs).sample().item())
+        lstm_probs = torch.softmax(decoder_out, dim=0)
+        sample = int(torch.distributions.categorical.Categorical(
+            lstm_probs).sample().item())
         sampled_char = CHARACTERS[sample]
 
         if sampled_char is EOS:
@@ -139,6 +137,7 @@ def test(x: list):
         lstm_input = targetsTensor([sampled_char], 1, CHARACTERS).to(DEVICE)
 
     return name
+
 
 to_save = {
     'session_name': NAME,
@@ -167,12 +166,15 @@ if args.continue_training == 1:
     decoder.load_state_dict(torch.load(
         f'Checkpoints/{NAME}_decoder.path.tar')['weights'])
 
-criterion = nn.NLLLoss(ignore_index=PAD_IDX)
-decoder_opt = torch.optim.Adam(decoder.parameters(), lr=LR)
-encoder_opt = torch.optim.Adam(encoder.parameters(), lr=LR)
+for i in range(10):
+    print(test(['Dylan']))
 
-df = pd.read_csv(TRAIN_FILE)
-ds = WordDataset(df)
-dl = DataLoader(ds, batch_size=BATCH_SZ, shuffle=True)
+# criterion = nn.NLLLoss(ignore_index=PAD_IDX)
+# decoder_opt = torch.optim.Adam(decoder.parameters(), lr=LR)
+# encoder_opt = torch.optim.Adam(encoder.parameters(), lr=LR)
 
-iter_train(dl)
+# df = pd.read_csv(TRAIN_FILE)
+# ds = WordDataset(df)
+# dl = DataLoader(ds, batch_size=BATCH_SZ, shuffle=True)
+
+# iter_train(dl)
