@@ -32,7 +32,7 @@ parser.add_argument('--print', help='Print every',
 parser.add_argument('--batch', help='Batch size',
                     nargs='?', default=512, type=int)
 parser.add_argument('--continue_training', help='Boolean whether to continue training an existing model', nargs='?',
-                    default=0, type=int)
+                    default=1, type=int)
 
 # Parse optional args from command line and save the configurations into a JSON file
 args = parser.parse_args()
@@ -73,7 +73,7 @@ def train(x: list):
 
     lstm_input = targetsTensor([SOS] * batch_sz, 1, CHARACTERS).to(DEVICE)
     for i in range(trg.shape[0]):
-        lstm_probs, lstm_hidden = decoder.forward(lstm_input, hidden)
+        lstm_probs, hidden = decoder.forward(lstm_input, hidden)
         best_index = torch.argmax(lstm_probs, dim=2)
 
         loss += criterion(lstm_probs[0], trg[i])
@@ -111,6 +111,35 @@ def iter_train(dl: DataLoader, path: str = "Checkpoints/"):
                 torch.save({'weights': decoder.state_dict()},
                            f"{path}{NAME}_decoder.path.tar")
 
+def test(x: list):
+    encoder.eval()
+    decoder.eval()
+
+    name_length = len(x[0])
+
+    src_x = [c for c in x[0]]
+
+    src = indexTensor(x, name_length, CHARACTERS).to(DEVICE)
+    lng = lengthTensor(x[0]).to(DEVICE)
+
+    hidden = encoder.forward(src, lng)
+
+    name = ''
+
+    lstm_input = targetsTensor([SOS], 1, CHARACTERS).to(DEVICE)
+    for i in range(10):
+        lstm_probs, hidden = decoder.forward(lstm_input, hidden)
+        best_index = torch.argmax(lstm_probs, dim=2)
+        best_char = CHARACTERS[best_index]
+
+        if best_char is PAD:
+            break
+        else:
+            name = name + best_char
+
+        lstm_input = targetsTensor([best_char], 1, CHARACTERS).to(DEVICE)
+
+    return name
 
 decoder = Decoder(NUM_CHAR, HIDDEN_SZ, PAD_IDX, NUM_LAYERS, EMBED_DIM).to(DEVICE)
 encoder = Encoder(NUM_CHAR, HIDDEN_SZ, PAD_IDX, NUM_LAYERS, EMBED_DIM).to(DEVICE)
