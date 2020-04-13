@@ -120,7 +120,7 @@ def test(x: list):
     src_x = [c for c in x[0]]
 
     src = indexTensor(x, name_length, CHARACTERS).to(DEVICE)
-    lng = lengthTensor(x[0]).to(DEVICE)
+    lng = lengthTensor(x).to(DEVICE)
 
     hidden = encoder.forward(src, lng)
 
@@ -132,7 +132,7 @@ def test(x: list):
         best_index = torch.argmax(lstm_probs, dim=2)
         best_char = CHARACTERS[best_index]
 
-        if best_char is PAD:
+        if best_char is EOS:
             break
         else:
             name = name + best_char
