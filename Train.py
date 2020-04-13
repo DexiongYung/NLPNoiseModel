@@ -6,6 +6,7 @@ import pandas as pd
 from Constants import *
 from Utilities.Plot import *
 from Utilities.Convert import *
+from Utilities.Json import *
 from torch.utils.data import DataLoader
 from Model.Seq2Seq import Encoder, Decoder
 from Dataset.WordDataset import WordDataset
@@ -135,6 +136,21 @@ def test(x: list):
 
     return name
 
+to_save = {
+    'session_name': NAME,
+    'hidden_size': HIDDEN_SZ,
+    'num_layers': NUM_LAYERS,
+    'embed_dim': EMBED_DIM,
+    'input': CHARACTERS,
+    'output': CHARACTERS,
+    'input_sz': NUM_CHAR,
+    'output_sz': NUM_CHAR,
+    'EOS': EOS,
+    'SOS': SOS,
+    'PAD': PAD,
+}
+
+save_json(f'Config/{NAME}.json', to_save)
 
 decoder = Decoder(NUM_CHAR, HIDDEN_SZ, PAD_IDX,
                   NUM_LAYERS, EMBED_DIM).to(DEVICE)
