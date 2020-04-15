@@ -166,15 +166,12 @@ if args.continue_training == 1:
     decoder.load_state_dict(torch.load(
         f'Checkpoints/{NAME}_decoder.path.tar')['weights'])
 
-for i in range(10):
-    print(test(['Dylan']))
+criterion = nn.NLLLoss(ignore_index=PAD_IDX)
+decoder_opt = torch.optim.Adam(decoder.parameters(), lr=LR)
+encoder_opt = torch.optim.Adam(encoder.parameters(), lr=LR)
 
-# criterion = nn.NLLLoss(ignore_index=PAD_IDX)
-# decoder_opt = torch.optim.Adam(decoder.parameters(), lr=LR)
-# encoder_opt = torch.optim.Adam(encoder.parameters(), lr=LR)
+df = pd.read_csv(TRAIN_FILE)
+ds = WordDataset(df)
+dl = DataLoader(ds, batch_size=BATCH_SZ, shuffle=True)
 
-# df = pd.read_csv(TRAIN_FILE)
-# ds = WordDataset(df)
-# dl = DataLoader(ds, batch_size=BATCH_SZ, shuffle=True)
-
-# iter_train(dl)
+iter_train(dl)
