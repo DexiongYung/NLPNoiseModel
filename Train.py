@@ -121,22 +121,89 @@ def test(x: list):
     name = ''
 
     lstm_input = targetsTensor([SOS], 1, CHARACTERS).to(DEVICE)
-    for i in range(10):
+    sampled_char = SOS
+    for i in range(100):
         decoder_out, hidden = decoder.forward(lstm_input, hidden)
         decoder_out = decoder_out.reshape(NUM_CHAR)
         lstm_probs = torch.softmax(decoder_out, dim=0)
-        sample = int(torch.distributions.categorical.Categorical(
-            lstm_probs).sample().item())
+        sample = int(torch.distributions.Categorical(lstm_probs).sample())
         sampled_char = CHARACTERS[sample]
 
         if sampled_char is EOS:
             break
-        else:
-            name = name + sampled_char
 
+        name += sampled_char
         lstm_input = targetsTensor([sampled_char], 1, CHARACTERS).to(DEVICE)
 
     return name
+
+
+def test_w_beam(x: list):
+    encoder.eval()
+    decoder.eval()
+
+    name_length = len(x[0])
+
+    src_x = [c for c in x[0]]
+
+    src = indexTensor(x, name_length, CHARACTERS).to(DEVICE)
+    lng = lengthTensor(x).to(DEVICE)
+
+    hidden = encoder.forward(src, lng)
+
+    return [name for name, score, hidden in top_k_beam_search(hidden)]
+
+
+def top_k_beam_search(hidden: torch.Tensor, k: int = 6, penalty: float = 4.0):
+    input = targetsTensor([SOS], 1, CHARACTERS).to(DEVICE)
+    output, hidden = decoder.forward(input, hidden)
+    output = output.reshape(NUM_CHAR)
+    probs = torch.exp(output)
+    EOS_idx = CHARACTERS.index(EOS)
+    probs[EOS_idx] = 0
+    top_k_probs, top_k_idx = torch.topk(probs, k, dim=0)
+
+    top_k = []
+    prev_chars = []
+    for i in range(len(top_k_idx)):
+        prev_char = CHARACTERS[top_k_idx[i].item()]
+
+        if i == 0:
+            top_k.append(
+                ([prev_char], -math.log(top_k_probs[i].item()) + penalty, hidden))
+        else:
+            top_k.append(
+                ([prev_char], -math.log(top_k_probs[i].item()), hidden))
+
+        prev_chars.append(prev_char)
+
+    while EOS not in prev_chars:
+        prev_chars = []
+        hypotheses = []
+
+        for name, score, hidden in top_k:
+            prev_char = name[-1]
+            input = targetsTensor([prev_char], 1, CHARACTERS).to(DEVICE)
+            output, hidden = decoder.forward(input, hidden)
+            probs = torch.exp(output)
+            top_k_probs, top_k_idx = torch.topk(probs, k, dim=2)
+            top_k_probs = top_k_probs.reshape(k)
+            top_k_idx = top_k_idx.reshape(k)
+
+            for i in range(len(top_k_probs)):
+                current_char = CHARACTERS[top_k_idx[i]]
+                current_prob = top_k_probs[i]
+                name_copy = name.copy()
+                name_copy.append(current_char)
+                new_score = score + -math.log(current_prob)
+                hypotheses.append((name_copy, new_score, hidden))
+
+        hypotheses.sort(key=lambda x: x[1])
+        top_k = hypotheses[:k]
+        top_k[0] = top_k[0][0], top_k[0][1] + penalty, top_k[0][2]
+        prev_chars = [name[-1] for name, probs, hidden in top_k]
+
+    return top_k
 
 
 to_save = {
