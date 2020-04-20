@@ -1,5 +1,6 @@
 import torch
 import os
+import hashlib
 import torch.nn as nn
 import argparse
 import pandas as pd
@@ -206,6 +207,26 @@ def top_k_beam_search(hidden: torch.Tensor, k: int = 6, penalty: float = 4.0):
     return top_k
 
 
+def hamming_distance(chaine1, chaine2):
+    return sum(c1 != c2 for c1, c2 in zip(chaine1, chaine2))
+
+def get_hamming_winner(noised_names: list, name: str):
+    distance = math.inf
+    winner = ''
+    for noised_name in noised_names:
+        output = ''
+        for char in noised_name:
+            if char is not EOS:
+                output += char
+        output_hash = hashlib.md5(output.encode()).hexdigest()
+        name_hash = hashlib.md5(name.encode()).hexdigest()
+        curr_distance = hamming_distance(name_hash, output_hash)
+
+        if curr_distance < distance and curr_distance != 0:
+            distance = curr_distance
+            winner = output
+    return winner
+
 to_save = {
     'session_name': NAME,
     'hidden_size': HIDDEN_SZ,
@@ -232,6 +253,25 @@ if args.continue_training == 1:
         f'Checkpoints/{NAME}_encoder.path.tar')['weights'])
     decoder.load_state_dict(torch.load(
         f'Checkpoints/{NAME}_decoder.path.tar')['weights'])
+
+# df = pd.read_csv('Data/LastNames.csv')
+
+# save_every = 5000
+
+# data = []
+
+# for i in range(len(df)):
+#     name = df.iloc[i]['name']
+#     noised_names = test_w_beam([name])
+#     noised = get_hamming_winner(noised_names, name)
+#     data.append([name, noised])
+
+#     if i != 0 and i % save_every == 0:
+#         df = pd.DataFrame(data, columns=['name', 'noised'])
+#         df.to_csv('Data/NoisedLast.csv', index=False)
+
+# df = pd.DataFrame(data, columns=['name', 'noised'])
+# df.to_csv('Data/NoisedLast.csv', index=False)
 
 criterion = nn.NLLLoss(ignore_index=PAD_IDX)
 decoder_opt = torch.optim.Adam(decoder.parameters(), lr=LR)
