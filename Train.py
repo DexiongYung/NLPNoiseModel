@@ -210,6 +210,7 @@ def top_k_beam_search(hidden: torch.Tensor, k: int = 6, penalty: float = 4.0):
 def hamming_distance(chaine1, chaine2):
     return sum(c1 != c2 for c1, c2 in zip(chaine1, chaine2))
 
+
 def get_hamming_winner(noised_names: list, name: str):
     distance = math.inf
     winner = ''
@@ -226,6 +227,7 @@ def get_hamming_winner(noised_names: list, name: str):
             distance = curr_distance
             winner = output
     return winner
+
 
 to_save = {
     'session_name': NAME,
