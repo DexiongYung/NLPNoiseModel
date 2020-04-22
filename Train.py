@@ -152,11 +152,11 @@ def test_w_beam(x: list):
 
     hidden = encoder.forward(src, lng)
 
-    return [name for name, score, hidden in top_k_beam_search(hidden)]
+    return [name for name, score, hidden in top_k_beam_search(decoder, hidden)]
 
 
-def noise_data(file_pth: str):
-    df = pd.read_csv(file_pth)
+def noise_test(in_path: str, out_path: str):
+    df = pd.read_csv(in_path)
 
     for i in range(len(df)):
         full_name = df.iloc[i]['name']
@@ -180,7 +180,7 @@ def noise_data(file_pth: str):
 
         df.at[i, 'name'] = full_name
 
-    df.to_csv('Data/noised.csv', index=False)
+    df.to_csv(out_path, index=False)
 
 
 to_save = {
@@ -209,6 +209,7 @@ if args.continue_training == 1:
         f'Checkpoints/{NAME}_encoder.path.tar')['weights'])
     decoder.load_state_dict(torch.load(
         f'Checkpoints/{NAME}_decoder.path.tar')['weights'])
+
 
 criterion = nn.NLLLoss(ignore_index=PAD_IDX)
 decoder_opt = torch.optim.Adam(decoder.parameters(), lr=LR)
