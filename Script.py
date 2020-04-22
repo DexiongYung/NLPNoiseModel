@@ -1,26 +1,20 @@
 import pandas as pd
 import torch
+from Utilities.Convert import *
 
-def hamming_distance(chaine1, chaine2):
-    return sum(c1 != c2 for c1, c2 in zip(chaine1, chaine2))
+df = pd.read_csv('Data/mispelled.csv')
+data = []
 
-df = pd.read_csv('Data/NoisedLast.csv')
+for idx, row in df.iterrows():
+    word = row['Correct']
+    noised = row['Noised']
 
-data =[]
+    if levenshtein(word, noised) < 5:
+        data.append([noised, word])
+    
+df = pd.DataFrame(data, columns=['Noised', 'Correct'])
 
-for i in range(len(df)):
-    noised = df.iloc[i]['noised']
-    name = df.iloc[i]['name']
-
-    distance = hamming_distance(name, noised)
-    name_len = len(name)
-
-    if distance < (1/name_len):
-        data.append([noised, name])
-
-df = pd.DataFrame(data, columns=['noised', 'name'])
-
-df.to_csv('Data/NoisedLast.csv')
+df.to_csv('Data/misppeled_2.csv', index=False)
 
 # df = pd.read_csv('Data/test.csv')
 
@@ -47,3 +41,22 @@ df.to_csv('Data/NoisedLast.csv')
 #     df.at[i, 'name'] = full_name
 
 # df.to_csv('Data/noised_test2.csv', index=False)
+
+# df = pd.read_csv('Data/LastNames.csv')
+
+# save_every = 5000
+
+# data = []
+
+# for i in range(len(df)):
+#     name = df.iloc[i]['name']
+#     noised_names = test_w_beam([name])
+#     noised = get_hamming_winner(noised_names, name)
+#     data.append([name, noised])
+
+#     if i != 0 and i % save_every == 0:
+#         df = pd.DataFrame(data, columns=['name', 'noised'])
+#         df.to_csv('Data/NoisedLast.csv', index=False)
+
+# df = pd.DataFrame(data, columns=['name', 'noised'])
+# df.to_csv('Data/NoisedLast.csv', index=False)

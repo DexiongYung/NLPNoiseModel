@@ -26,7 +26,7 @@ parser.add_argument('--num_iter', help='Number of iterations',
 parser.add_argument('--num_layers', help='Number of layers',
                     nargs='?', default=5, type=int)
 parser.add_argument('--train_file', help='File to train on',
-                    nargs='?', default='Data/mispelled.csv', type=str)
+                    nargs='?', default='Data/mispelled2.csv', type=str)
 parser.add_argument('--column', help='Column header of data',
                     nargs='?', default='name', type=str)
 parser.add_argument('--print', help='Print every',
@@ -155,78 +155,32 @@ def test_w_beam(x: list):
     return [name for name, score, hidden in top_k_beam_search(hidden)]
 
 
-def top_k_beam_search(hidden: torch.Tensor, k: int = 6, penalty: float = 4.0):
-    input = targetsTensor([SOS], 1, CHARACTERS).to(DEVICE)
-    output, hidden = decoder.forward(input, hidden)
-    output = output.reshape(NUM_CHAR)
-    probs = torch.exp(output)
-    EOS_idx = CHARACTERS.index(EOS)
-    probs[EOS_idx] = 0
-    top_k_probs, top_k_idx = torch.topk(probs, k, dim=0)
+def noise_data(file_pth: str):
+    df = pd.read_csv(file_pth)
 
-    top_k = []
-    prev_chars = []
-    for i in range(len(top_k_idx)):
-        prev_char = CHARACTERS[top_k_idx[i].item()]
+    for i in range(len(df)):
+        full_name = df.iloc[i]['name']
+        fn = df.iloc[i]['first']
+        mn = df.iloc[i]['middle']
+        ln = df.iloc[i]['last']
 
-        if i == 0:
-            top_k.append(
-                ([prev_char], -math.log(top_k_probs[i].item()) + penalty, hidden))
-        else:
-            top_k.append(
-                ([prev_char], -math.log(top_k_probs[i].item()), hidden))
+        noised_fns = test_w_beam([fn])
+        noised_lns = test_w_beam([ln])
 
-        prev_chars.append(prev_char)
+        noised_fn = get_levenshtein_winner(noised_fns, fn)
+        noised_ln = get_levenshtein_winner(noised_lns, ln)
 
-    while EOS not in prev_chars:
-        prev_chars = []
-        hypotheses = []
+        full_name = full_name.replace(fn, noised_fn)
+        full_name = full_name.replace(ln, noised_ln)
 
-        for name, score, hidden in top_k:
-            prev_char = name[-1]
-            input = targetsTensor([prev_char], 1, CHARACTERS).to(DEVICE)
-            output, hidden = decoder.forward(input, hidden)
-            probs = torch.exp(output)
-            top_k_probs, top_k_idx = torch.topk(probs, k, dim=2)
-            top_k_probs = top_k_probs.reshape(k)
-            top_k_idx = top_k_idx.reshape(k)
+        if isinstance(mn, str) and len(mn) > 1:
+            noised_mns = test_w_beam([mn])
+            noised_mn = get_levenshtein_winner(noised_mns, mn)
+            full_name = full_name.replace(mn, noised_mn)
 
-            for i in range(len(top_k_probs)):
-                current_char = CHARACTERS[top_k_idx[i]]
-                current_prob = top_k_probs[i]
-                name_copy = name.copy()
-                name_copy.append(current_char)
-                new_score = score + -math.log(current_prob)
-                hypotheses.append((name_copy, new_score, hidden))
+        df.at[i, 'name'] = full_name
 
-        hypotheses.sort(key=lambda x: x[1])
-        top_k = hypotheses[:k]
-        top_k[0] = top_k[0][0], top_k[0][1] + penalty, top_k[0][2]
-        prev_chars = [name[-1] for name, probs, hidden in top_k]
-
-    return top_k
-
-
-def hamming_distance(chaine1, chaine2):
-    return sum(c1 != c2 for c1, c2 in zip(chaine1, chaine2))
-
-
-def get_hamming_winner(noised_names: list, name: str):
-    distance = math.inf
-    winner = ''
-    for noised_name in noised_names:
-        output = ''
-        for char in noised_name:
-            if char is not EOS:
-                output += char
-        output_hash = hashlib.md5(output.encode()).hexdigest()
-        name_hash = hashlib.md5(name.encode()).hexdigest()
-        curr_distance = hamming_distance(name_hash, output_hash)
-
-        if curr_distance < distance and curr_distance != 0:
-            distance = curr_distance
-            winner = output
-    return winner
+    df.to_csv('Data/noised.csv', index=False)
 
 
 to_save = {
@@ -255,25 +209,6 @@ if args.continue_training == 1:
         f'Checkpoints/{NAME}_encoder.path.tar')['weights'])
     decoder.load_state_dict(torch.load(
         f'Checkpoints/{NAME}_decoder.path.tar')['weights'])
-
-# df = pd.read_csv('Data/LastNames.csv')
-
-# save_every = 5000
-
-# data = []
-
-# for i in range(len(df)):
-#     name = df.iloc[i]['name']
-#     noised_names = test_w_beam([name])
-#     noised = get_hamming_winner(noised_names, name)
-#     data.append([name, noised])
-
-#     if i != 0 and i % save_every == 0:
-#         df = pd.DataFrame(data, columns=['name', 'noised'])
-#         df.to_csv('Data/NoisedLast.csv', index=False)
-
-# df = pd.DataFrame(data, columns=['name', 'noised'])
-# df.to_csv('Data/NoisedLast.csv', index=False)
 
 criterion = nn.NLLLoss(ignore_index=PAD_IDX)
 decoder_opt = torch.optim.Adam(decoder.parameters(), lr=LR)
