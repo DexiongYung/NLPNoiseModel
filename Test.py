@@ -7,9 +7,12 @@ from Model.Seq2Seq import Encoder, Decoder
 parser = argparse.ArgumentParser()
 parser.add_argument('--config', help='Config json name',
                     nargs='?', default='noise', type=str)
+parser.add_argument('--k', help='Number of width for beam search',
+                    nargs='?', default=6, type=int)
 
 args = parser.parse_args()
 NAME = args.config
+K = args.k
 config_json = load_json(f'Config/{NAME}.json')
 input_sz = config_json['input_sz']
 input = config_json['input']
@@ -18,6 +21,7 @@ output = config_json['output']
 hidden_sz = config_json['hidden_size']
 num_layers = config_json['num_layers']
 embed_sz = config_json['embed_dim']
+SOS = config_json['SOS']
 EOS = config_json['EOS']
 PAD = config_json['PAD']
 PAD_idx = input.index(PAD)
@@ -65,9 +69,6 @@ def test(x: list):
 
 
 def test_w_beam(x: list):
-    encoder.eval()
-    decoder.eval()
-
     name_length = len(x[0])
 
     src_x = [c for c in x[0]]
@@ -77,7 +78,7 @@ def test_w_beam(x: list):
 
     hidden = encoder.forward(src, lng)
 
-    return [name for name, score, hidden in top_k_beam_search(decoder, hidden, 10)]
+    return [name for name, score, hidden in top_k_beam_search(decoder, hidden, K)]
 
 
 def noise_test(in_path: str, out_path: str):
