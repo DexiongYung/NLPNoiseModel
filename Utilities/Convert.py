@@ -2,6 +2,7 @@ import torch
 import math
 from Constants import *
 
+
 def indexTensor(names: list, max_len: int, allowed_chars: list):
     tensor = torch.zeros(max_len, len(names)).type(torch.LongTensor)
     for i, name in enumerate(names):
@@ -40,6 +41,71 @@ def targetsTensor(names: list, max_len: int, allowed_chars: list):
 
 
 def top_k_beam_search(decoder, hidden: torch.Tensor, k: int = 6, penalty: float = 4.0):
+    input = targetsTensor([SOS], 1, CHARACTERS).to(DEVICE)
+    output, hidden = decoder.forward(input, hidden)
+    output = output.reshape(NUM_CHAR)
+    probs = torch.exp(output)
+    EOS_idx = CHARACTERS.index(EOS)
+    probs[EOS_idx] = 0
+    top_k_probs, top_k_idx = torch.topk(probs, k, dim=0)
+
+    top_k = []
+    for i in range(len(top_k_idx)):
+        prev_char = CHARACTERS[top_k_idx[i].item()]
+
+        if i == 0:
+            top_k.append(
+                ([prev_char], -math.log(top_k_probs[i].item()) + penalty, hidden))
+        else:
+            top_k.append(
+                ([prev_char], -math.log(top_k_probs[i].item()), hidden))
+
+    is_EOS_in_all_top_k = True
+
+    for name, score, hidden in top_k:
+        if EOS not in name:
+            is_EOS_in_all_top_k = False
+
+    while not is_EOS_in_all_top_k:
+        hypotheses = []
+
+        for name, score, hidden in top_k:
+            prev_char = name[-1]
+
+            if prev_char is EOS:
+                hypotheses.append((name.copy(), score, hidden))
+            else:
+                input = targetsTensor([prev_char], 1, CHARACTERS).to(DEVICE)
+                output, hidden = decoder.forward(input, hidden)
+                probs = torch.exp(output)
+                top_k_probs, top_k_idx = torch.topk(probs, k, dim=2)
+                top_k_probs = top_k_probs.reshape(k)
+                top_k_idx = top_k_idx.reshape(k)
+
+                for i in range(len(top_k_probs)):
+                    current_char = CHARACTERS[top_k_idx[i]]
+                    current_prob = top_k_probs[i]
+                    name_copy = name.copy()
+                    name_copy.append(current_char)
+
+                    new_score = score + -math.log(current_prob)
+
+                    hypotheses.append((name_copy, new_score, hidden))
+
+        hypotheses.sort(key=lambda x: x[1])
+        top_k = hypotheses[:k]
+        top_k[0] = top_k[0][0], top_k[0][1] + penalty, top_k[0][2]
+
+        is_EOS_in_all_top_k = True
+
+        for name, score, hidden in top_k:
+            if EOS not in name:
+                is_EOS_in_all_top_k = False
+
+    return top_k
+
+
+def top_k_beam_search_graph(decoder, hidden: torch.Tensor, k: int = 6, penalty: float = 4.0):
     input = targetsTensor([SOS], 1, CHARACTERS).to(DEVICE)
     output, hidden = decoder.forward(input, hidden)
     output = output.reshape(NUM_CHAR)
@@ -91,28 +157,6 @@ def top_k_beam_search(decoder, hidden: torch.Tensor, k: int = 6, penalty: float 
     return top_k
 
 
-def hamming_distance(chaine1, chaine2):
-    return sum(c1 != c2 for c1, c2 in zip(chaine1, chaine2))
-
-
-def get_hamming_winner(noised_names: list, name: str):
-    distance = math.inf
-    winner = ''
-    for noised_name in noised_names:
-        output = ''
-        for char in noised_name:
-            if char is not EOS:
-                output += char
-        output_hash = hashlib.md5(output.encode()).hexdigest()
-        name_hash = hashlib.md5(name.encode()).hexdigest()
-        curr_distance = hamming_distance(name_hash, output_hash)
-
-        if curr_distance < distance and curr_distance != 0:
-            distance = curr_distance
-            winner = output
-    return winner
-
-
 def levenshtein(s1, s2):
     if len(s1) < len(s2):
         return levenshtein(s2, s1)
@@ -139,13 +183,9 @@ def get_levenshtein_winner(noised_names: list, name: str):
     distance = math.inf
     winner = ''
     for noised_name in noised_names:
-        output = ''
-        for char in noised_name:
-            if char is not EOS:
-                output += char
-        curr_distance = levenshtein(output, name)
+        curr_distance = levenshtein(noised_name, name)
 
         if curr_distance < distance and curr_distance != 0:
             distance = curr_distance
-            winner = output
+            winner = noised_name
     return winner
