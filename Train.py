@@ -106,83 +106,6 @@ def iter_train(dl: DataLoader, path: str = "Checkpoints/"):
                            f"{path}{NAME}_decoder.path.tar")
 
 
-def test(x: list):
-    encoder.eval()
-    decoder.eval()
-
-    name_length = len(x[0])
-
-    src_x = [c for c in x[0]]
-
-    src = indexTensor(x, name_length, CHARACTERS).to(DEVICE)
-    lng = lengthTensor(x).to(DEVICE)
-
-    hidden = encoder.forward(src, lng)
-
-    name = ''
-
-    lstm_input = targetsTensor([SOS], 1, CHARACTERS).to(DEVICE)
-    sampled_char = SOS
-    for i in range(100):
-        decoder_out, hidden = decoder.forward(lstm_input, hidden)
-        decoder_out = decoder_out.reshape(NUM_CHAR)
-        lstm_probs = torch.softmax(decoder_out, dim=0)
-        sample = int(torch.distributions.Categorical(lstm_probs).sample())
-        sampled_char = CHARACTERS[sample]
-
-        if sampled_char is EOS:
-            break
-
-        name += sampled_char
-        lstm_input = targetsTensor([sampled_char], 1, CHARACTERS).to(DEVICE)
-
-    return name
-
-
-def test_w_beam(x: list):
-    encoder.eval()
-    decoder.eval()
-
-    name_length = len(x[0])
-
-    src_x = [c for c in x[0]]
-
-    src = indexTensor(x, name_length, CHARACTERS).to(DEVICE)
-    lng = lengthTensor(x).to(DEVICE)
-
-    hidden = encoder.forward(src, lng)
-
-    return [name for name, score, hidden in top_k_beam_search(hidden)]
-
-
-def noise_data(file_pth: str):
-    df = pd.read_csv(file_pth)
-
-    for i in range(len(df)):
-        full_name = df.iloc[i]['name']
-        fn = df.iloc[i]['first']
-        mn = df.iloc[i]['middle']
-        ln = df.iloc[i]['last']
-
-        noised_fns = test_w_beam([fn])
-        noised_lns = test_w_beam([ln])
-
-        noised_fn = get_levenshtein_winner(noised_fns, fn)
-        noised_ln = get_levenshtein_winner(noised_lns, ln)
-
-        full_name = full_name.replace(fn, noised_fn)
-        full_name = full_name.replace(ln, noised_ln)
-
-        if isinstance(mn, str) and len(mn) > 1:
-            noised_mns = test_w_beam([mn])
-            noised_mn = get_levenshtein_winner(noised_mns, mn)
-            full_name = full_name.replace(mn, noised_mn)
-
-        df.at[i, 'name'] = full_name
-
-    df.to_csv('Data/noised.csv', index=False)
-
-
 to_save = {
     'session_name': NAME,
     'hidden_size': HIDDEN_SZ,
@@ -209,6 +132,7 @@ if args.continue_training == 1:
         f'Checkpoints/{NAME}_encoder.path.tar')['weights'])
     decoder.load_state_dict(torch.load(
         f'Checkpoints/{NAME}_decoder.path.tar')['weights'])
+
 
 criterion = nn.NLLLoss(ignore_index=PAD_IDX)
 decoder_opt = torch.optim.Adam(decoder.parameters(), lr=LR)

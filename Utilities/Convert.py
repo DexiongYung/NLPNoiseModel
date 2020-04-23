@@ -1,6 +1,6 @@
 import torch
 import math
-import Constants
+from Constants import *
 
 def indexTensor(names: list, max_len: int, allowed_chars: list):
     tensor = torch.zeros(max_len, len(names)).type(torch.LongTensor)
@@ -39,7 +39,7 @@ def targetsTensor(names: list, max_len: int, allowed_chars: list):
     return ret
 
 
-def top_k_beam_search(hidden: torch.Tensor, k: int = 6, penalty: float = 4.0):
+def top_k_beam_search(decoder, hidden: torch.Tensor, k: int = 6, penalty: float = 4.0):
     input = targetsTensor([SOS], 1, CHARACTERS).to(DEVICE)
     output, hidden = decoder.forward(input, hidden)
     output = output.reshape(NUM_CHAR)
