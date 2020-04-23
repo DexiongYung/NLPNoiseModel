@@ -26,8 +26,8 @@ EOS = config_json['EOS']
 PAD = config_json['PAD']
 PAD_idx = input.index(PAD)
 
-encoder = Encoder(input_sz, hidden_sz, PAD_idx, num_layers, embed_sz)
-decoder = Decoder(input_sz, hidden_sz, PAD_idx, num_layers, embed_sz)
+encoder = Encoder(input_sz, hidden_sz, PAD_idx, num_layers, embed_sz).to(DEVICE)
+decoder = Decoder(input_sz, hidden_sz, PAD_idx, num_layers, embed_sz).to(DEVICE)
 
 encoder.load_state_dict(torch.load(
     f'Checkpoints/{NAME}_encoder.path.tar')['weights'])
