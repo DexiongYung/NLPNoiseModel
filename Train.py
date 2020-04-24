@@ -66,12 +66,12 @@ def train(x: list):
                                [EOS] + [PAD] * ((trg_max_len - len(s)) - 1), x[0]))
 
     src = indexTensor(src_x, src_max_len, CHARACTERS).to(DEVICE)
-    trg = targetsTensor(trg_x, trg_max_len, CHARACTERS).to(DEVICE)
+    trg = targetTensor(trg_x, trg_max_len, CHARACTERS).to(DEVICE)
     lng = lengthTensor(x[1]).to(DEVICE)
 
     hidden = encoder.forward(src, lng)
 
-    lstm_input = targetsTensor([SOS] * batch_sz, 1, CHARACTERS).to(DEVICE)
+    lstm_input = targetTensor([SOS] * batch_sz, 1, CHARACTERS).to(DEVICE)
     for i in range(trg.shape[0]):
         lstm_probs, hidden = decoder.forward(lstm_input, hidden)
         loss += criterion(lstm_probs[0], trg[i])

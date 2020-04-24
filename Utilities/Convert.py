@@ -25,7 +25,7 @@ def lengthTensor(names: list):
     return tensor
 
 
-def targetsTensor(names: list, max_len: int, allowed_chars: list):
+def targetTensor(names: list, max_len: int, allowed_chars: list):
     batch_sz = len(names)
     ret = torch.zeros(max_len, batch_sz).type(torch.LongTensor)
     for i in range(max_len):
@@ -41,7 +41,7 @@ def targetsTensor(names: list, max_len: int, allowed_chars: list):
 
 
 def top_k_beam_search(decoder, hidden: torch.Tensor, k: int = 15, penalty: float = 4.0):
-    input = targetsTensor([SOS], 1, CHARACTERS).to(DEVICE)
+    input = targetTensor([SOS], 1, CHARACTERS).to(DEVICE)
     output, hidden = decoder.forward(input, hidden)
     output = output.reshape(NUM_CHAR)
     probs = torch.exp(output)
@@ -70,7 +70,7 @@ def top_k_beam_search(decoder, hidden: torch.Tensor, k: int = 15, penalty: float
             if prev_char is EOS:
                 hypotheses.append(name.copy(), score, hidden_clone)
             else:
-                input = targetsTensor([prev_char], 1, CHARACTERS).to(DEVICE)
+                input = targetTensor([prev_char], 1, CHARACTERS).to(DEVICE)
                 output, hidden = decoder.forward(input, hidden)
                 probs = torch.exp(output)
                 top_k_probs, top_k_idx = torch.topk(probs, k, dim=2)
@@ -94,7 +94,7 @@ def top_k_beam_search(decoder, hidden: torch.Tensor, k: int = 15, penalty: float
 
 
 def top_k_beam_search_graph(decoder, hidden: torch.Tensor, k: int = 6, penalty: float = 4.0):
-    input = targetsTensor([SOS], 1, CHARACTERS).to(DEVICE)
+    input = targetTensor([SOS], 1, CHARACTERS).to(DEVICE)
     output, hidden = decoder.forward(input, hidden)
     output = output.reshape(NUM_CHAR)
     probs = torch.exp(output)
@@ -122,7 +122,7 @@ def top_k_beam_search_graph(decoder, hidden: torch.Tensor, k: int = 6, penalty: 
 
         for name, score, hidden in top_k:
             prev_char = name[-1]
-            input = targetsTensor([prev_char], 1, CHARACTERS).to(DEVICE)
+            input = targetTensor([prev_char], 1, CHARACTERS).to(DEVICE)
             output, hidden = decoder.forward(input, hidden)
             probs = torch.exp(output)
             top_k_probs, top_k_idx = torch.topk(probs, k, dim=2)

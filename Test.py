@@ -55,7 +55,7 @@ def test(x: list):
 
     CONFIG_NAME = ''
 
-    lstm_input = targetsTensor([SOS], 1, CHARACTERS).to(DEVICE)
+    lstm_input = targetTensor([SOS], 1, CHARACTERS).to(DEVICE)
     sampled_char = SOS
     for i in range(100):
         decoder_out, hidden = decoder.forward(lstm_input, hidden)
@@ -68,7 +68,7 @@ def test(x: list):
             break
 
         CONFIG_NAME += sampled_char
-        lstm_input = targetsTensor([sampled_char], 1, CHARACTERS).to(DEVICE)
+        lstm_input = targetTensor([sampled_char], 1, CHARACTERS).to(DEVICE)
 
     return CONFIG_NAME
 
