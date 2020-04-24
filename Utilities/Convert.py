@@ -40,7 +40,7 @@ def targetsTensor(names: list, max_len: int, allowed_chars: list):
     return ret
 
 
-def top_k_beam_search(decoder, hidden: torch.Tensor, k: int = 6, penalty: float = 4.0):
+def top_k_beam_search(decoder, hidden: torch.Tensor, k: int = 15, penalty: float = 4.0):
     input = targetsTensor([SOS], 1, CHARACTERS).to(DEVICE)
     output, hidden = decoder.forward(input, hidden)
     output = output.reshape(NUM_CHAR)
@@ -60,20 +60,15 @@ def top_k_beam_search(decoder, hidden: torch.Tensor, k: int = 6, penalty: float 
             top_k.append(
                 ([prev_char], -math.log(top_k_probs[i].item()), hidden))
 
-    is_EOS_in_all_top_k = True
-
-    for name, score, hidden in top_k:
-        if EOS not in name:
-            is_EOS_in_all_top_k = False
-
-    while not is_EOS_in_all_top_k:
+    while not is_EOS_in_all_topk(top_k):
         hypotheses = []
 
         for name, score, hidden in top_k:
             prev_char = name[-1]
+            hidden_clone = (hidden[0].clone(), hidden[1].clone())
 
             if prev_char is EOS:
-                hypotheses.append((name.copy(), score, hidden))
+                hypotheses.append(name.copy(), score, hidden_clone)
             else:
                 input = targetsTensor([prev_char], 1, CHARACTERS).to(DEVICE)
                 output, hidden = decoder.forward(input, hidden)
@@ -87,20 +82,13 @@ def top_k_beam_search(decoder, hidden: torch.Tensor, k: int = 6, penalty: float 
                     current_prob = top_k_probs[i]
                     name_copy = name.copy()
                     name_copy.append(current_char)
-
                     new_score = score + -math.log(current_prob)
 
-                    hypotheses.append((name_copy, new_score, hidden))
+                    hypotheses.append(name_copy, new_score, hidden_clone)
 
         hypotheses.sort(key=lambda x: x[1])
         top_k = hypotheses[:k]
-        top_k[0] = top_k[0][0], top_k[0][1] + penalty, top_k[0][2]
-
-        is_EOS_in_all_top_k = True
-
-        for name, score, hidden in top_k:
-            if EOS not in name:
-                is_EOS_in_all_top_k = False
+        top_k[0][1] = top_k[0][1] + penalty
 
     return top_k
 
@@ -155,6 +143,16 @@ def top_k_beam_search_graph(decoder, hidden: torch.Tensor, k: int = 6, penalty: 
         prev_chars = [name[-1] for name, probs, hidden in top_k]
 
     return top_k
+
+
+def is_EOS_in_all_topk(topk: list):
+    '''
+        Topk contains a tuple of (name, score, hidden state)
+    '''
+    for name, _, _ in topk:
+        if EOS not in name:
+            return False
+    return True
 
 
 def levenshtein(s1, s2):
