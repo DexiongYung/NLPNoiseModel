@@ -64,14 +64,14 @@ def top_k_beam_search(decoder, hidden: torch.Tensor, k: int = 15, penalty: float
         hypotheses = []
 
         for name, score, hidden in top_k:
-            prev_char = name[-1]
-            hidden_clone = (hidden[0].clone(), hidden[1].clone())
-
-            if prev_char is EOS:
+            if EOS in name:
+                hidden_clone = (hidden[0].clone(), hidden[1].clone())
                 hypotheses.append((name.copy(), score, hidden_clone))
             else:
+                prev_char = name[-1]
                 input = targetTensor([prev_char], 1, CHARACTERS).to(DEVICE)
                 output, hidden = decoder.forward(input, hidden)
+                hidden_clone = (hidden[0].clone(), hidden[1].clone())
                 probs = torch.exp(output)
                 top_k_probs, top_k_idx = torch.topk(probs, k, dim=2)
                 top_k_probs = top_k_probs.reshape(k)
