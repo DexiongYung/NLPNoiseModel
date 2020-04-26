@@ -5,15 +5,18 @@ from Utilities.Convert import *
 from Model.Seq2Seq import Encoder, Decoder
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--config', help='Config json name',
+parser.add_argument('--config', help='Config json CONFIG_NAME',
                     nargs='?', default='noise', type=str)
 parser.add_argument('--k', help='Number of width for beam search',
-                    nargs='?', default=6, type=int)
+                    nargs='?', default=30, type=int)
+parser.add_argument('--name', help='Name to test one',
+                    nargs='?', default='Jason', type=str)
 
 args = parser.parse_args()
-NAME = args.config
+CONFIG_NAME = args.config
+NAME = args.name
 K = args.k
-config_json = load_json(f'Config/{NAME}.json')
+config_json = load_json(f'Config/{CONFIG_NAME}.json')
 input_sz = config_json['input_sz']
 input = config_json['input']
 output_sz = config_json['output_sz']
@@ -26,31 +29,33 @@ EOS = config_json['EOS']
 PAD = config_json['PAD']
 PAD_idx = input.index(PAD)
 
-encoder = Encoder(input_sz, hidden_sz, PAD_idx, num_layers, embed_sz).to(DEVICE)
-decoder = Decoder(input_sz, hidden_sz, PAD_idx, num_layers, embed_sz).to(DEVICE)
+encoder = Encoder(input_sz, hidden_sz, PAD_idx,
+                  num_layers, embed_sz).to(DEVICE)
+decoder = Decoder(input_sz, hidden_sz, PAD_idx,
+                  num_layers, embed_sz).to(DEVICE)
 
 encoder.load_state_dict(torch.load(
-    f'Checkpoints/{NAME}_encoder.path.tar')['weights'])
+    f'Checkpoints/{CONFIG_NAME}_encoder.path.tar')['weights'])
 decoder.load_state_dict(torch.load(
-    f'Checkpoints/{NAME}_decoder.path.tar')['weights'])
+    f'Checkpoints/{CONFIG_NAME}_decoder.path.tar')['weights'])
 
 encoder.eval()
 decoder.eval()
 
 
 def test(x: list):
-    name_length = len(x[0])
+    CONFIG_NAME_length = len(x[0])
 
     src_x = [c for c in x[0]]
 
-    src = indexTensor(x, name_length, CHARACTERS).to(DEVICE)
+    src = indexTensor(x, CONFIG_NAME_length, CHARACTERS).to(DEVICE)
     lng = lengthTensor(x).to(DEVICE)
 
     hidden = encoder.forward(src, lng)
 
-    name = ''
+    CONFIG_NAME = ''
 
-    lstm_input = targetsTensor([SOS], 1, CHARACTERS).to(DEVICE)
+    lstm_input = targetTensor([SOS], 1, CHARACTERS).to(DEVICE)
     sampled_char = SOS
     for i in range(100):
         decoder_out, hidden = decoder.forward(lstm_input, hidden)
@@ -62,23 +67,23 @@ def test(x: list):
         if sampled_char is EOS:
             break
 
-        name += sampled_char
-        lstm_input = targetsTensor([sampled_char], 1, CHARACTERS).to(DEVICE)
+        CONFIG_NAME += sampled_char
+        lstm_input = targetTensor([sampled_char], 1, CHARACTERS).to(DEVICE)
 
-    return name
+    return CONFIG_NAME
 
 
 def test_w_beam(x: list):
-    name_length = len(x[0])
+    CONFIG_NAME_length = len(x[0])
 
     src_x = [c for c in x[0]]
 
-    src = indexTensor(x, name_length, CHARACTERS).to(DEVICE)
+    src = indexTensor(x, CONFIG_NAME_length, CHARACTERS).to(DEVICE)
     lng = lengthTensor(x).to(DEVICE)
 
     hidden = encoder.forward(src, lng)
 
-    return [name for name, score, hidden in top_k_beam_search(decoder, hidden, K)]
+    return [CONFIG_NAME for CONFIG_NAME, score, hidden in top_k_beam_search(decoder, hidden, K)]
 
 
 def noise_test(in_path: str, out_path: str):
@@ -93,17 +98,26 @@ def noise_test(in_path: str, out_path: str):
         noised_fns = test_w_beam([fn])
         noised_lns = test_w_beam([ln])
 
-        noised_fn = get_levenshtein_winner(noised_fns, fn)
-        noised_ln = get_levenshtein_winner(noised_lns, ln)
+        noised_fn_strs = [''.join(c for c in name).replace(
+            'EOS', '') for name in noised_fns]
+        noised_ln_strs = [''.join(c for c in name).replace(
+            'EOS', '') for name in noised_lns]
+
+        noised_fn = get_levenshtein_winner(noised_fn_strs, fn)
+        noised_ln = get_levenshtein_winner(noised_ln_strs, ln)
 
         full_name = full_name.replace(fn, noised_fn)
         full_name = full_name.replace(ln, noised_ln)
 
         if isinstance(mn, str) and len(mn) > 1:
             noised_mns = test_w_beam([mn])
-            noised_mn = get_levenshtein_winner(noised_mns, mn)
+            noised_mn_strs = [''.join(c for c in name).replace(
+                'EOS', '') for name in noised_mns]
+            noised_mn = get_levenshtein_winner(noised_mn_strs, mn)
             full_name = full_name.replace(mn, noised_mn)
 
         df.at[i, 'name'] = full_name
 
     df.to_csv(out_path, index=False)
+
+noise_test('Data/test.csv', 'Data/noised_test2.csv')
