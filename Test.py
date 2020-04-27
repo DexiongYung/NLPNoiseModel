@@ -120,4 +120,4 @@ def noise_test(in_path: str, out_path: str):
 
     df.to_csv(out_path, index=False)
 
-noise_test('Data/test.csv', 'Data/noised_test2.csv')
+noise_test('Data/british.csv', 'Data/british2.csv')
