@@ -95,29 +95,31 @@ def noise_test(in_path: str, out_path: str):
         mn = df.iloc[i]['middle']
         ln = df.iloc[i]['last']
 
-        noised_fns = test_w_beam([fn])
-        noised_lns = test_w_beam([ln])
+        if is_name(fn):
+            noised_fn = get_levenshtein_beam_winner(fn)
+            full_name = full_name.replace(fn, noised_fn)
 
-        noised_fn_strs = [''.join(c for c in name).replace(
-            'EOS', '') for name in noised_fns]
-        noised_ln_strs = [''.join(c for c in name).replace(
-            'EOS', '') for name in noised_lns]
-
-        noised_fn = get_levenshtein_winner(noised_fn_strs, fn)
-        noised_ln = get_levenshtein_winner(noised_ln_strs, ln)
-
-        full_name = full_name.replace(fn, noised_fn)
-        full_name = full_name.replace(ln, noised_ln)
-
-        if isinstance(mn, str) and len(mn) > 1:
-            noised_mns = test_w_beam([mn])
-            noised_mn_strs = [''.join(c for c in name).replace(
-                'EOS', '') for name in noised_mns]
-            noised_mn = get_levenshtein_winner(noised_mn_strs, mn)
+        if is_name(mn):
+            noised_mn = get_levenshtein_beam_winner(mn)
             full_name = full_name.replace(mn, noised_mn)
+
+        if is_name(ln):
+            noised_ln = get_levenshtein_beam_winner(ln)
+            full_name = full_name.replace(ln, noised_ln)
 
         df.at[i, 'name'] = full_name
 
     df.to_csv(out_path, index=False)
+
+def is_name(name: str):
+    return isinstance(name, str) and len(name) > 1
+
+def get_levenshtein_beam_winner(name: str):
+    noised = test_w_beam([name])
+    noised_strs = [''.join(c for c in name).replace(
+        'EOS', '') for name in noised]
+    
+    return get_levenshtein_winner(noised_strs, name)
+
 
 noise_test('Data/british.csv', 'Data/british2.csv')
