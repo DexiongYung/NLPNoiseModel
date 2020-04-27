@@ -8,7 +8,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--config', help='Config json CONFIG_NAME',
                     nargs='?', default='noise', type=str)
 parser.add_argument('--k', help='Number of width for beam search',
-                    nargs='?', default=30, type=int)
+                    nargs='?', default=101, type=int)
 parser.add_argument('--name', help='Name to test one',
                     nargs='?', default='Jason', type=str)
 
@@ -64,7 +64,7 @@ def test(x: list):
         sample = int(torch.distributions.Categorical(lstm_probs).sample())
         sampled_char = CHARACTERS[sample]
 
-        if sampled_char is EOS:
+        if sampled_char == EOS:
             break
 
         CONFIG_NAME += sampled_char
@@ -74,16 +74,16 @@ def test(x: list):
 
 
 def test_w_beam(x: list):
-    CONFIG_NAME_length = len(x[0])
+    name_length = len(x[0])
 
     src_x = [c for c in x[0]]
 
-    src = indexTensor(x, CONFIG_NAME_length, CHARACTERS).to(DEVICE)
+    src = indexTensor(x, name_length, CHARACTERS).to(DEVICE)
     lng = lengthTensor(x).to(DEVICE)
 
     hidden = encoder.forward(src, lng)
 
-    return [CONFIG_NAME for CONFIG_NAME, score, hidden in top_k_beam_search(decoder, hidden, K)]
+    return [''.join(c for c in name[:-1]) for name, score, hidden in top_k_beam_search(decoder, hidden, K)]
 
 
 def noise_test(in_path: str, out_path: str):
