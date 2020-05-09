@@ -66,12 +66,12 @@ def train(x: list):
                                [EOS] + [PAD] * ((trg_max_len - len(s)) - 1), x[0]))
 
     src = indexTensor(src_x, src_max_len, CHARACTERS).to(DEVICE)
-    trg = targetTensor(trg_x, trg_max_len, CHARACTERS).to(DEVICE)
+    trg = targetTensor(trg_x, trg_max_len, OUT_CHARACTERS).to(DEVICE)
     lng = lengthTensor(x[1]).to(DEVICE)
 
     hidden = encoder.forward(src, lng)
 
-    lstm_input = targetTensor([SOS] * batch_sz, 1, CHARACTERS).to(DEVICE)
+    lstm_input = targetTensor([SOS] * batch_sz, 1, OUT_CHARACTERS).to(DEVICE)
     for i in range(trg.shape[0]):
         lstm_probs, hidden = decoder.forward(lstm_input, hidden)
         loss += criterion(lstm_probs[0], trg[i])
@@ -113,8 +113,8 @@ to_save = {
     'embed_dim': EMBED_DIM,
     'input': CHARACTERS,
     'output': CHARACTERS,
-    'input_sz': NUM_CHAR,
-    'output_sz': NUM_CHAR,
+    'input_sz': NUM_IN_CHAR,
+    'output_sz': NUM_OUT_CHAR,
     'EOS': EOS,
     'SOS': SOS,
     'PAD': PAD,
@@ -122,9 +122,9 @@ to_save = {
 
 save_json(f'Config/{NAME}.json', to_save)
 
-decoder = Decoder(NUM_CHAR, HIDDEN_SZ, PAD_IDX,
+decoder = Decoder(NUM_IN_CHAR, HIDDEN_SZ, PAD_IDX,
                   NUM_LAYERS, EMBED_DIM).to(DEVICE)
-encoder = Encoder(NUM_CHAR, HIDDEN_SZ, PAD_IDX,
+encoder = Encoder(NUM_OUT_CHAR, HIDDEN_SZ, PAD_IDX,
                   NUM_LAYERS, EMBED_DIM).to(DEVICE)
 
 if args.continue_training == 1:
