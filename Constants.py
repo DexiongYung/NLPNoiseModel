@@ -8,8 +8,7 @@ SOS = 'SOS'
 PAD = 'PAD'
 EOS = 'EOS'
 
-CHARACTERS = [c for c in string.printable] + [SOS, PAD, EOS]
-OUT_CHARACTERS = CHARACTERS + [chr(i) for i in range(1000, 1100)]
-NUM_IN_CHAR = len(CHARACTERS)
-NUM_OUT_CHAR = len
+CHARACTERS = [c for c in string.printable] + \
+    [chr(i) for i in range(1000, 1100)] + [chr(i) for i in range(0x0021, 0x02FF)] + ['’'] + [SOS, PAD, EOS]
+NUM_CHARS = len(CHARACTERS)
 PAD_IDX = CHARACTERS.index(PAD)
