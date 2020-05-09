@@ -32,7 +32,7 @@ parser.add_argument('--column', help='Column header of data',
 parser.add_argument('--print', help='Print every',
                     nargs='?', default=50, type=int)
 parser.add_argument('--batch', help='Batch size',
-                    nargs='?', default=512, type=int)
+                    nargs='?', default=256, type=int)
 parser.add_argument('--continue_training', help='Boolean whether to continue training an existing model', nargs='?',
                     default=False, type=bool)
 
