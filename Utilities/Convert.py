@@ -43,7 +43,7 @@ def targetTensor(names: list, max_len: int, allowed_chars: list):
 def top_k_beam_search(decoder, hidden: torch.Tensor, k: int = 15, penalty: float = 4.0):
     input = targetTensor([SOS], 1, CHARACTERS).to(DEVICE)
     output, hidden = decoder.forward(input, hidden)
-    output = output.reshape(NUM_CHAR)
+    output = output.reshape(NUM_CHARS)
     probs = torch.exp(output)
     EOS_idx = CHARACTERS.index(EOS)
     probs[EOS_idx] = 0
@@ -96,7 +96,7 @@ def top_k_beam_search(decoder, hidden: torch.Tensor, k: int = 15, penalty: float
 def top_k_beam_search_graph(decoder, hidden: torch.Tensor, k: int = 6, penalty: float = 4.0):
     input = targetTensor([SOS], 1, CHARACTERS).to(DEVICE)
     output, hidden = decoder.forward(input, hidden)
-    output = output.reshape(NUM_CHAR)
+    output = output.reshape(NUM_CHARS)
     probs = torch.exp(output)
     EOS_idx = CHARACTERS.index(EOS)
     probs[EOS_idx] = 0

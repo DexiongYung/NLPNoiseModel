@@ -15,7 +15,8 @@ class Encoder(nn.Module):
     def forward(self, input: torch.Tensor, non_padded_len: torch.Tensor, hidden: torch.Tensor = None):
         batch_sz = input.shape[1]
         embedded_input = self.embed(input)
-        pps_input = nn.utils.rnn.pack_padded_sequence(embedded_input, non_padded_len, enforce_sorted=False)
+        pps_input = nn.utils.rnn.pack_padded_sequence(
+            embedded_input, non_padded_len, enforce_sorted=False)
 
         hidden = self.init_hidden(batch_sz)
 
