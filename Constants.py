@@ -9,6 +9,7 @@ PAD = 'PAD'
 EOS = 'EOS'
 
 CHARACTERS = [c for c in string.printable] + \
-    [chr(i) for i in range(1000, 1100)] + [chr(i) for i in range(0x0021, 0x02FF)] + ['’', '‘', '€'] + [SOS, PAD, EOS]
+    [chr(i) for i in range(1000, 1100)] + [chr(i)
+                                           for i in range(0x0021, 0x02FF)] + ['’', '‘', '€'] + [SOS, PAD, EOS]
 NUM_CHARS = len(CHARACTERS)
 PAD_IDX = CHARACTERS.index(PAD)

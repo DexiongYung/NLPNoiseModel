@@ -1,5 +1,6 @@
 from collections import OrderedDict
-import json 
+import json
+
 
 def load_json(jsonpath: str) -> dict:
     with open(jsonpath) as jsonfile:
