@@ -45,22 +45,22 @@ decoder.eval()
 
 
 def test(x: list):
-    CONFIG_NAME_length = len(x[0])
+    name_length = len(x[0])
 
     src_x = [c for c in x[0]]
 
-    src = indexTensor(x, CONFIG_NAME_length, CHARACTERS).to(DEVICE)
+    src = indexTensor(x, name_length, CHARACTERS).to(DEVICE)
     lng = lengthTensor(x).to(DEVICE)
 
     hidden = encoder.forward(src, lng)
 
-    CONFIG_NAME = ''
+    name = ''
 
     lstm_input = targetTensor([SOS], 1, CHARACTERS).to(DEVICE)
     sampled_char = SOS
     for i in range(100):
         decoder_out, hidden = decoder.forward(lstm_input, hidden)
-        decoder_out = decoder_out.reshape(NUM_CHAR)
+        decoder_out = decoder_out.reshape(NUM_CHARS)
         lstm_probs = torch.softmax(decoder_out, dim=0)
         sample = int(torch.distributions.Categorical(lstm_probs).sample())
         sampled_char = CHARACTERS[sample]
@@ -68,10 +68,10 @@ def test(x: list):
         if sampled_char == EOS:
             break
 
-        CONFIG_NAME += sampled_char
+        name += sampled_char
         lstm_input = targetTensor([sampled_char], 1, CHARACTERS).to(DEVICE)
 
-    return CONFIG_NAME
+    return name
 
 
 def test_w_beam(x: list):
@@ -136,4 +136,4 @@ def get_levenshtein_beam_winner(name: str):
     return get_levenshtein_winner(noised_strs, name)
 
 
-noise_test('Data/british.csv', 'Data/british2.csv')
+test(['Jinsoo'])
