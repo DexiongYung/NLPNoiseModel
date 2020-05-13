@@ -62,6 +62,7 @@ def clean_df_of_rows_above_len(df: pandas.DataFrame, max_length: int = 8):
 
     return pandas.DataFrame(data, columns=['Noised', 'Correct'])
 
+
 def get_levenshtein_stats(df: pandas.DataFrame):
     counts_dict = dict()
     length = len(df)
@@ -76,11 +77,12 @@ def get_levenshtein_stats(df: pandas.DataFrame):
             counts_dict[distance] += 1
         else:
             counts_dict[distance] = 1
-    
+
     for key in counts_dict.keys():
         counts_dict[key] /= length
-    
+
     return counts_dict
+
 
 def get_edit_distributions_stats(df: pandas.DataFrame):
     length = len(df)
@@ -94,10 +96,11 @@ def get_edit_distributions_stats(df: pandas.DataFrame):
         ins_total += ins
         dels_total += dels
         subs_total += subs
-    
+
     total = ins_total + dels_total + subs_total
 
     return ins_total/total, dels_total/total, subs_total/total
+
 
 df = pandas.read_csv(file_path)
 print(get_edit_distributions_stats(df))

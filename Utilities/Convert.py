@@ -189,14 +189,15 @@ def get_levenshtein_w_counts(s1: str, s2: str):
 
     for i in range(1, height_dim):
         matrix[i][0][1] = i
-    
+
     for y in range(1, height_dim):
         for x in range(1, row_dim):
             left_scores = matrix[y][x - 1].copy()
             above_scores = matrix[y - 1][x].copy()
             diagonal_scores = matrix[y - 1][x - 1].copy()
 
-            scores = [sum_list(left_scores), sum_list(diagonal_scores), sum_list(above_scores)]
+            scores = [sum_list(left_scores), sum_list(
+                diagonal_scores), sum_list(above_scores)]
             min_idx = scores.index(min(scores))
 
             if min_idx == 0:
@@ -208,7 +209,7 @@ def get_levenshtein_w_counts(s1: str, s2: str):
             else:
                 matrix[y][x] = above_scores
                 matrix[y][x][1] += 1
-    
+
     result = matrix[-1][-1]
     # 0 is insertions, 1 is removals and 2 is substitutions
     return result[0], result[1], result[2]
