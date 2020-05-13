@@ -177,6 +177,52 @@ def levenshtein(s1, s2):
     return previous_row[-1]
 
 
+def get_levenshtein_w_counts(s1: str, s2: str):
+    row_dim = len(s1) + 1  # +1 for empty string
+    height_dim = len(s2) + 1
+
+    # tuple = [ins, del, subs]
+    # Moving across row is insertion
+    # Moving down column is deletion
+    # Moving diagonal is sub
+    matrix = [[[n, 0, 0] for n in range(row_dim)] for m in range(height_dim)]
+
+    for i in range(1, height_dim):
+        matrix[i][0][1] = i
+    
+    for y in range(1, height_dim):
+        for x in range(1, row_dim):
+            left_scores = matrix[y][x - 1].copy()
+            above_scores = matrix[y - 1][x].copy()
+            diagonal_scores = matrix[y - 1][x - 1].copy()
+
+            scores = [sum_list(left_scores), sum_list(diagonal_scores), sum_list(above_scores)]
+            min_idx = scores.index(min(scores))
+
+            if min_idx == 0:
+                matrix[y][x] = left_scores
+                matrix[y][x][0] += 1
+            elif min_idx == 1:
+                matrix[y][x] = diagonal_scores
+                matrix[y][x][2] += (s1[x-1] != s2[y-1])
+            else:
+                matrix[y][x] = above_scores
+                matrix[y][x][1] += 1
+    
+    result = matrix[-1][-1]
+    # 0 is insertions, 1 is removals and 2 is substitutions
+    return result[0], result[1], result[2]
+
+
+def sum_list(lst: list):
+    sum = 0
+
+    for i in lst:
+        sum += i
+
+    return sum
+
+
 def get_levenshtein_winner(noised_names: list, name: str):
     distance = math.inf
     winner = ''
