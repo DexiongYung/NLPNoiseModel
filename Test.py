@@ -134,3 +134,6 @@ def get_levenshtein_beam_winner(name: str):
         'EOS', '') for name in noised]
 
     return get_levenshtein_winner(noised_strs, name)
+
+
+print(test(['McWilliams']))
