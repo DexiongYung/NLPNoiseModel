@@ -37,12 +37,12 @@ def convert_kaggle_to_csv(path: str):
     return pd.DataFrame(data, columns=['Noised', 'Correct'])
 
 
-directory = 'Data/kaggle'
-files = os.listdir(directory)
-main = pd.read_csv('Data/mispelled2.csv')
+df = pd.read_csv('Data/mispelled_best.csv')
 
-for file_pth in files:
-    df = convert_kaggle_to_csv(f'{directory}/{file_pth}')
-    main = main.append(df)
-
-main.to_csv('Data/mispelled3.csv', index=False)
+df['Correct'] = df["Correct"].apply(lambda x: ''.join(
+    [" " if ord(i) < 32 or ord(i) > 126 else i for i in str(x)]))
+df['Noised'] = df["Noised"].apply(lambda x: ''.join(
+    [" " if ord(i) < 32 or ord(i) > 126 else i for i in str(x)]))
+df.dropna()
+df.drop_duplicates()
+df.to_csv('Data/mispelled.csv', index=False)

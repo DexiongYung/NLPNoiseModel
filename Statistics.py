@@ -1,4 +1,5 @@
 import pandas
+import string
 import argparse
 import numpy as np
 import matplotlib.pyplot as plt
@@ -12,64 +13,18 @@ args = parser.parse_args()
 file_path = args.file_path
 
 
-def show_pie_of_levenshtein(df: pandas.DataFrame, title: str):
+def get_levenshtein_stats(noiseds: list, cleans: list):
+    clean_len = len(cleans)
+    noise_len = len(noiseds)
+
+    if clean_len != noise_len:
+        raise Exception('Clean list and noise list are not the same length')
+
     counts_dict = dict()
 
-    for _, row in df.iterrows():
-        noised = str(row['Noised'])
-        correct = str(row['Correct'])
-
-        distance = levenshtein(noised, correct)
-
-        if distance in counts_dict.keys():
-            counts_dict[distance] += 1
-        else:
-            counts_dict[distance] = 1
-
-    distances = counts_dict.keys()
-    counts = counts_dict.values()
-
-    fig, ax = plt.subplots(figsize=(len(counts), 3),
-                           subplot_kw=dict(aspect="equal"))
-
-    def func(pct, allvals):
-        return "{:.1f}%".format(pct)
-
-    wedges, texts, autotexts = ax.pie(counts, autopct=lambda pct: func(pct, counts),
-                                      textprops=dict(color="w"))
-
-    ax.legend(wedges, distances,
-              title="Distance",
-              loc="center left",
-              bbox_to_anchor=(1, 0, 0.5, 1))
-
-    plt.setp(autotexts, size=8, weight="bold")
-
-    ax.set_title(title)
-
-    plt.show()
-
-
-def clean_df_of_rows_above_len(df: pandas.DataFrame, max_length: int = 8):
-    data = []
-    for _, row in df.iterrows():
-        noised = str(row['Noised'])
-        correct = str(row['Correct'])
-        distance = levenshtein(noised, correct)
-
-        if distance < max_length:
-            data.append([noised, correct])
-
-    return pandas.DataFrame(data, columns=['Noised', 'Correct'])
-
-
-def get_levenshtein_stats(df: pandas.DataFrame):
-    counts_dict = dict()
-    length = len(df)
-
-    for _, row in df.iterrows():
-        noised = str(row['Noised'])
-        correct = str(row['Correct'])
+    for idx in range(clean_len):
+        noised = str(noiseds[idx])
+        correct = str(cleans[idx])
 
         distance = levenshtein(noised, correct)
 
@@ -79,18 +34,23 @@ def get_levenshtein_stats(df: pandas.DataFrame):
             counts_dict[distance] = 1
 
     for key in counts_dict.keys():
-        counts_dict[key] /= length
+        counts_dict[key] = round(counts_dict[key] / clean_len, 4)
 
     return counts_dict
 
 
-def get_edit_distributions_stats(df: pandas.DataFrame):
-    length = len(df)
+def get_edit_distributions_stats(noiseds: list, cleans: list):
+    clean_len = len(cleans)
+    noise_len = len(noiseds)
+
+    if clean_len != noise_len:
+        raise Exception('Clean list and noise list are not the same length')
+
     ins_total, dels_total, subs_total, total = 0, 0, 0, 0
 
-    for _, row in df.iterrows():
-        noised = str(row['Noised'])
-        correct = str(row['Correct'])
+    for idx in range(clean_len):
+        noised = str(noiseds[idx])
+        correct = str(cleans[idx])
 
         ins, dels, subs = get_levenshtein_w_counts(noised, correct)
         ins_total += ins
@@ -102,5 +62,86 @@ def get_edit_distributions_stats(df: pandas.DataFrame):
     return ins_total/total, dels_total/total, subs_total/total
 
 
+def get_percent_of_noise_outside_clean(clean: list, noise: list):
+    clean_len = len(clean)
+    noise_len = len(noise)
+
+    outside_count = 0
+
+    if clean_len != noise_len:
+        raise Exception('Clean list and noise list are not the same length')
+
+    for idx in range(clean_len):
+        noised_word = noise[idx]
+        clean_word = clean[idx]
+
+        for char in noised_word:
+            if char not in clean_word:
+                outside_count += 1
+
+    return float(outside_count/noise_len)
+
+
+def get_percent_of_digit_noise_outside_clean(clean: list, noise: list):
+    clean_len = len(clean)
+    noise_len = len(noise)
+
+    outside_count = 0
+
+    if clean_len != noise_len:
+        raise Exception('Clean list and noise list are not the same length')
+
+    for idx in range(clean_len):
+        noised_word = noise[idx]
+        clean_word = clean[idx]
+
+        for char in noised_word:
+            if char not in clean_word and char in string.digits:
+                outside_count += 1
+
+    return float(outside_count/noise_len)
+
+
+def get_percent_of_punc_noise_outside_clean(clean: list, noise: list):
+    clean_len = len(clean)
+    noise_len = len(noise)
+
+    outside_count = 0
+
+    if clean_len != noise_len:
+        raise Exception('Clean list and noise list are not the same length')
+
+    for idx in range(clean_len):
+        noised_word = noise[idx]
+        clean_word = clean[idx]
+
+        for char in noised_word:
+            if char not in clean_word and char in string.punctuation:
+                outside_count += 1
+
+    return float(outside_count/noise_len)
+
+
+def get_percent_of_alpha_noise_outside_clean(clean: list, noise: list):
+    clean_len = len(clean)
+    noise_len = len(noise)
+
+    outside_count = 0
+
+    if clean_len != noise_len:
+        raise Exception('Clean list and noise list are not the same length')
+
+    for idx in range(clean_len):
+        noised_word = noise[idx]
+        clean_word = clean[idx]
+
+        for char in noised_word:
+            if char not in clean_word and char in string.ascii_letters:
+                outside_count += 1
+
+    return float(outside_count/noise_len)
+
+
 df = pandas.read_csv(file_path)
-print(get_edit_distributions_stats(df))
+
+get_edit_distributions_stats(df)

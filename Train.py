@@ -26,7 +26,7 @@ parser.add_argument('--num_iter', help='Number of iterations',
 parser.add_argument('--num_layers', help='Number of layers',
                     nargs='?', default=5, type=int)
 parser.add_argument('--train_file', help='File to train on',
-                    nargs='?', default='Data/mispelled3.csv', type=str)
+                    nargs='?', default='Data/mispelled_best.csv', type=str)
 parser.add_argument('--column', help='Column header of data',
                     nargs='?', default='name', type=str)
 parser.add_argument('--print', help='Print every',
@@ -49,6 +49,12 @@ BATCH_SZ = args.batch
 COLUMN = args.column
 PRINTS = args.print
 CLIP = 1
+
+CHARACTERS = [c for c in string.printable] + \
+    [chr(i) for i in range(1000, 1100)] + [chr(i)
+                                           for i in range(0x0021, 0x02FF)] + ['’', '‘', '€'] + [SOS, PAD, EOS]
+NUM_CHARS = len(CHARACTERS)
+PAD_IDX = CHARACTERS.index(PAD)
 
 
 def train(x: list):
@@ -129,9 +135,9 @@ encoder = Encoder(NUM_CHARS, HIDDEN_SZ, PAD_IDX,
 
 if args.continue_training:
     encoder.load_state_dict(torch.load(
-        f'Checkpoints/{NAME}_encoder.path.tar')['weights'])
+        f'Checkpoints/NLL/{NAME}_encoder.path.tar')['weights'])
     decoder.load_state_dict(torch.load(
-        f'Checkpoints/{NAME}_decoder.path.tar')['weights'])
+        f'Checkpoints/NLL/{NAME}_decoder.path.tar')['weights'])
 
 
 criterion = nn.NLLLoss(ignore_index=PAD_IDX)

@@ -1,0 +1,4 @@
+Percent of words noised with characters not in correct word: 0.43026231969786594
+Percent of words noised with punctuation: 0.012714997497383628
+Percent of words noised with whitespace: 0.006720093734358648
+Percent of words noised with digits: 0.00015925740546935432
