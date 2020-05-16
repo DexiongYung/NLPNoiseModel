@@ -2,6 +2,8 @@ import pandas as pd
 import torch
 import os
 from Utilities.Convert import *
+from os import listdir
+from os.path import isfile, join
 
 
 def convert_efc_to_csv(path: str):
@@ -37,12 +39,20 @@ def convert_kaggle_to_csv(path: str):
     return pd.DataFrame(data, columns=['Noised', 'Correct'])
 
 
-df = pd.read_csv('Data/mispelled_best.csv')
+def convert_sentence_txt_to_list(path: str, num_lines_read: int):
+    data = []
+    with open(path, 'r', encoding='utf8') as infile:
+        count = 0
+        lines = []
+        for line in infile:
+            count += 1
+            if count % 7 == 0:
+                # each line ends with '\n' which should not be added
+                lines.append(line[:-1])
+                data.append([lines[2], lines[3], lines[5]])
+                count = 0
+                lines = []
+            else:
+                lines.append(line[:-1])
 
-df['Correct'] = df["Correct"].apply(lambda x: ''.join(
-    [" " if ord(i) < 32 or ord(i) > 126 else i for i in str(x)]))
-df['Noised'] = df["Noised"].apply(lambda x: ''.join(
-    [" " if ord(i) < 32 or ord(i) > 126 else i for i in str(x)]))
-df.dropna()
-df.drop_duplicates()
-df.to_csv('Data/mispelled.csv', index=False)
+    return data
