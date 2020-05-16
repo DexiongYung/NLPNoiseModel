@@ -1,6 +1,5 @@
 import torch
 import os
-import hashlib
 import torch.nn as nn
 import argparse
 import pandas as pd
@@ -11,6 +10,7 @@ from Utilities.Json import *
 from torch.utils.data import DataLoader
 from Model.Seq2Seq import Encoder, Decoder
 from Dataset.WordDataset import WordDataset
+from Statistics import *
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--name', help='Name of the Session',
