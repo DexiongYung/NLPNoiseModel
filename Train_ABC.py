@@ -128,7 +128,7 @@ def iter_train(dl: DataLoader, path: str = "Checkpoints/"):
                 encoder_opt.step()
                 decoder_opt.step()
 
-                total_loss += loss
+                total_loss += ABC_loss
 
                 cleaned_list = []
                 noised_list = []
