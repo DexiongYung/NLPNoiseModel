@@ -103,9 +103,6 @@ def iter_train(dl: DataLoader, path: str = "Checkpoints/"):
     noised_list = []
 
     for iter in range(1, ITER + 1):
-        encoder_opt.zero_grad()
-        decoder_opt.zero_grad()
-
         for x in dl:
             padded_x_len = len(max(x, key=len))
             count = count + 1
@@ -116,14 +113,22 @@ def iter_train(dl: DataLoader, path: str = "Checkpoints/"):
             batch_loss += loss
 
             if count % BATCH_SZ:
+                encoder_opt.zero_grad()
+                decoder_opt.zero_grad()
+
                 sample_stats_sum_tensor = get_summary_stats_tensor(
                     noised_list, cleaned_list)
                 distance = torch.dist(
                     sample_stats_sum_tensor, obs_stats_sum_tensor, p=2)
 
-                batch_loss *= distance
-                batch_loss.backward()
-                total_loss += batch_loss
+                ABC_loss = -1 * torch.sum(batch_loss)
+                ABC_loss *= distance.item()
+                ABC_loss.backward()
+
+                encoder_opt.step()
+                decoder_opt.step()
+
+                total_loss += loss
 
                 cleaned_list = []
                 noised_list = []
@@ -138,9 +143,6 @@ def iter_train(dl: DataLoader, path: str = "Checkpoints/"):
                            f"{path}{NAME}_encoder.path.tar")
                 torch.save({'weights': decoder.state_dict()},
                            f"{path}{NAME}_decoder.path.tar")
-
-        encoder_opt.step()
-        decoder_opt.step()
 
 
 def get_summary_stats_tensor(noised: list, clean: list):
