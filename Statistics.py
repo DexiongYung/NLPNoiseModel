@@ -39,7 +39,7 @@ def get_levenshtein_stats(noiseds: list, cleans: list):
     return counts_dict
 
 
-def get_edit_distributions_stats(noiseds: list, cleans: list):
+def get_edit_distributions_percents(noiseds: list, cleans: list):
     clean_len = len(cleans)
     noise_len = len(noiseds)
 
@@ -59,7 +59,7 @@ def get_edit_distributions_stats(noiseds: list, cleans: list):
 
     total = ins_total + dels_total + subs_total
 
-    return ins_total/total, dels_total/total, subs_total/total
+    return float(ins_total/total), float(dels_total/total), float(subs_total/total)
 
 
 def get_percent_of_noise_outside_clean(clean: list, noise: list):
@@ -72,8 +72,8 @@ def get_percent_of_noise_outside_clean(clean: list, noise: list):
         raise Exception('Clean list and noise list are not the same length')
 
     for idx in range(clean_len):
-        noised_word = noise[idx]
-        clean_word = clean[idx]
+        noised_word = str(noise[idx])
+        clean_word = str(clean[idx])
 
         for char in noised_word:
             if char not in clean_word:
@@ -92,8 +92,8 @@ def get_percent_of_digit_noise_outside_clean(clean: list, noise: list):
         raise Exception('Clean list and noise list are not the same length')
 
     for idx in range(clean_len):
-        noised_word = noise[idx]
-        clean_word = clean[idx]
+        noised_word = str(noise[idx])
+        clean_word = str(clean[idx])
 
         for char in noised_word:
             if char not in clean_word and char in string.digits:
@@ -112,8 +112,8 @@ def get_percent_of_punc_noise_outside_clean(clean: list, noise: list):
         raise Exception('Clean list and noise list are not the same length')
 
     for idx in range(clean_len):
-        noised_word = noise[idx]
-        clean_word = clean[idx]
+        noised_word = str(noise[idx])
+        clean_word = str(clean[idx])
 
         for char in noised_word:
             if char not in clean_word and char in string.punctuation:
@@ -132,8 +132,8 @@ def get_percent_of_alpha_noise_outside_clean(clean: list, noise: list):
         raise Exception('Clean list and noise list are not the same length')
 
     for idx in range(clean_len):
-        noised_word = noise[idx]
-        clean_word = clean[idx]
+        noised_word = str(noise[idx])
+        clean_word = str(clean[idx])
 
         for char in noised_word:
             if char not in clean_word and char in string.ascii_letters:
@@ -142,6 +142,86 @@ def get_percent_of_alpha_noise_outside_clean(clean: list, noise: list):
     return float(outside_count/noise_len)
 
 
-df = pandas.read_csv(file_path)
+def get_percent_of_upper_alpha_noise_outside_clean(clean: list, noise: list):
+    clean_len = len(clean)
+    noise_len = len(noise)
 
-get_edit_distributions_stats(df)
+    outside_count = 0
+
+    if clean_len != noise_len:
+        raise Exception('Clean list and noise list are not the same length')
+
+    for idx in range(clean_len):
+        noised_word = str(noise[idx])
+        clean_word = str(clean[idx])
+
+        for char in noised_word:
+            if char not in clean_word and char in string.ascii_uppercase:
+                outside_count += 1
+
+    return float(outside_count/noise_len)
+
+
+def get_percent_of_lower_alpha_noise_outside_clean(clean: list, noise: list):
+    clean_len = len(clean)
+    noise_len = len(noise)
+
+    outside_count = 0
+
+    if clean_len != noise_len:
+        raise Exception('Clean list and noise list are not the same length')
+
+    for idx in range(clean_len):
+        noised_word = str(noise[idx])
+        clean_word = str(clean[idx])
+
+        for char in noised_word:
+            if char not in clean_word and char in string.ascii_lowercase:
+                outside_count += 1
+
+    return float(outside_count/noise_len)
+
+
+def get_percent_of_vowel_noise_outside_clean(clean: list, noise: list):
+    clean_len = len(clean)
+    noise_len = len(noise)
+
+    outside_count = 0
+
+    if clean_len != noise_len:
+        raise Exception('Clean list and noise list are not the same length')
+
+    for idx in range(clean_len):
+        noised_word = str(noise[idx])
+        clean_word = str(clean[idx])
+
+        for char in noised_word:
+            if char not in clean_word and char in 'aeiouAEIOU':
+                outside_count += 1
+
+    return float(outside_count/noise_len)
+
+
+def get_percent_of_consonants_noise_outside_clean(clean: list, noise: list):
+    clean_len = len(clean)
+    noise_len = len(noise)
+
+    outside_count = 0
+
+    if clean_len != noise_len:
+        raise Exception('Clean list and noise list are not the same length')
+
+    for idx in range(clean_len):
+        noised_word = str(noise[idx])
+        clean_word = str(clean[idx])
+
+        for char in noised_word:
+            if char not in clean_word and char in string.ascii_letters and char not in 'aeiouAEIOU':
+                outside_count += 1
+
+    return float(outside_count/noise_len)
+
+
+df = pandas.read_csv(file_path)
+correct_list = list(df.Correct)
+noised_list = list(df.Noised)

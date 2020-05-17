@@ -56,3 +56,12 @@ def convert_sentence_txt_to_list(path: str, num_lines_read: int):
                 lines.append(line[:-1])
 
     return data
+
+df = pd.read_csv('Data/Name/FirstNames.csv')
+del df['Unnamed: 0']
+del df['Unnamed: 0.1']
+df.to_csv('Data/Name/Firsts.csv', index=False)
+
+df = pd.read_csv('Data/Name/LastNames.csv')
+del df['Unnamed: 0']
+df.to_csv('Data/Name/Lasts.csv', index=False)

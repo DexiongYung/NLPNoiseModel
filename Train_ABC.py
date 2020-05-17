@@ -3,13 +3,13 @@ import os
 import torch.nn as nn
 import argparse
 import pandas as pd
-from Constants import *
+from Constants import DEVICE
 from Utilities.Plot import *
 from Utilities.Convert import *
 from Utilities.Json import *
 from torch.utils.data import DataLoader
 from Model.Seq2Seq import Encoder, Decoder
-from Dataset.WordDataset import WordDataset
+from Dataset.NameDataset import NameDataset
 from Statistics import *
 
 parser = argparse.ArgumentParser()
@@ -26,13 +26,17 @@ parser.add_argument('--num_iter', help='Number of iterations',
 parser.add_argument('--num_layers', help='Number of layers',
                     nargs='?', default=5, type=int)
 parser.add_argument('--train_file', help='File to train on',
-                    nargs='?', default='Data/mispelled.csv', type=str)
+                    nargs='?', default='Data/Name/Firsts.csv', type=str)
+parser.add_argument('--obs_file', help='File to observation summary statistics on',
+                    nargs='?', default=None, type=str)
 parser.add_argument('--column', help='Column header of data',
                     nargs='?', default='name', type=str)
 parser.add_argument('--print', help='Print every',
                     nargs='?', default=50, type=int)
 parser.add_argument('--batch', help='Batch size',
-                    nargs='?', default=256, type=int)
+                    nargs='?', default=32, type=int)
+parser.add_argument('--mini_batch', help='Mini batch size',
+                    nargs='?', default=1000, type=int)
 parser.add_argument('--continue_training', help='Boolean whether to continue training an existing model', nargs='?',
                     default=False, type=bool)
 
@@ -45,66 +49,91 @@ EMBED_DIM = args.embed_dim
 LR = args.lr
 HIDDEN_SZ = args.hidden_size
 TRAIN_FILE = args.train_file
+OBS_FILE = args.obs_file
 BATCH_SZ = args.batch
 COLUMN = args.column
 PRINTS = args.print
+MINI_BATCH_SZ = args.mini_batch
 CLIP = 1
 
-
+SOS = chr(0x00FD)
+PAD = chr(0x00FE)
+EOS = chr(0x00FF)
 CHARACTERS = [c for c in string.printable] + [SOS, PAD, EOS]
 NUM_CHARS = len(CHARACTERS)
 PAD_IDX = CHARACTERS.index(PAD)
 
 
 def train(x: list):
-    batch_sz = len(x[0])
-    src_max_len = len(max(x[1], key=len))
-    trg_max_len = len(max(x[0], key=len)) + 1
+    loss = 0
+    max_len = len(max(x, key=len))
 
-    src_x = list(
-        map(lambda s: [char for char in s] + [PAD] * ((src_max_len - len(s))), x[1]))
-    trg_x = list(map(lambda s: [char for char in s] +
-                               [EOS] + [PAD] * ((trg_max_len - len(s)) - 1), x[0]))
+    src_x = list(map(lambda s: [char for char in s] +
+                     [PAD] * (max_len - len(s)), x))
 
-    src = indexTensor(src_x, src_max_len, CHARACTERS).to(DEVICE)
-    trg = targetTensor(trg_x, trg_max_len, CHARACTERS).to(DEVICE)
-    lng = lengthTensor(x[1]).to(DEVICE)
+    src = indexTensor(src_x, max_len, CHARACTERS).to(DEVICE)
+    lng = lengthTensor(x).to(DEVICE)
 
     hidden = encoder.forward(src, lng)
 
-    lstm_input = targetTensor([SOS] * batch_sz, 1, CHARACTERS).to(DEVICE)
-    names = [''] * batch_sz
+    lstm_input = targetTensor([SOS] * MINI_BATCH_SZ, 1, CHARACTERS).to(DEVICE)
+    names = [''] * MINI_BATCH_SZ
 
-    for i in range(trg.shape[0]):
+    # max_len + 1 since as length of word increases the Levenshtein distance size goes down
+    for i in range(max_len + 1):
         lstm_probs, hidden = decoder.forward(lstm_input, hidden)
-        _, indices = lstm_probs.max(2)
+        categorical = torch.distributions.Categorical(probs=lstm_probs[0])
+        samples = categorical.sample()
+        loss += categorical.log_prob(samples)
 
-        for j in range(batch_sz):
-            names[j] += CHARACTERS[indices[0][j].item()]
+        for j in range(MINI_BATCH_SZ):
+            names[j] += CHARACTERS[samples[j].item()]
 
-        lstm_input = trg[i].unsqueeze(0)
+        lstm_input = samples.unsqueeze(0)
 
-    return names
+    return names, loss
 
 
 def iter_train(dl: DataLoader, path: str = "Checkpoints/"):
     all_losses = []
     total_loss = 0
+    batch_loss = 0
     count = 0
+    cleaned_list = []
+    noised_list = []
 
     for iter in range(1, ITER + 1):
         encoder_opt.zero_grad()
         decoder_opt.zero_grad()
 
         for x in dl:
+            padded_x_len = len(max(x, key=len))
             count = count + 1
-            names = train(x)
+            generated_names, loss = train(x)
+
+            cleaned_list += x
+            noised_list += [name.split(EOS)[0] for name in generated_names]
+            batch_loss += loss
+
+            if count % BATCH_SZ:
+                sample_stats_sum_tensor = get_summary_stats_tensor(
+                    noised_list, cleaned_list)
+                distance = torch.dist(
+                    sample_stats_sum_tensor, obs_stats_sum_tensor, p=2)
+
+                batch_loss *= distance
+                batch_loss.backward()
+                total_loss += batch_loss
+
+                cleaned_list = []
+                noised_list = []
+                batch_loss = 0
 
             if count % PRINTS == 0:
                 all_losses.append(total_loss / PRINTS)
                 total_loss = 0
                 plot_losses(
-                    all_losses, x_label=f"Iteration of Batch Size: {BATCH_SZ}", y_label="NLLosss", filename=NAME)
+                    all_losses, x_label=f"Iteration of Batch Size: {BATCH_SZ}, Mini Batch Size: {MINI_BATCH_SZ}", y_label="ABC", filename=NAME)
                 torch.save({'weights': encoder.state_dict()},
                            f"{path}{NAME}_encoder.path.tar")
                 torch.save({'weights': decoder.state_dict()},
@@ -112,6 +141,28 @@ def iter_train(dl: DataLoader, path: str = "Checkpoints/"):
 
         encoder_opt.step()
         decoder_opt.step()
+
+
+def get_summary_stats_tensor(noised: list, clean: list):
+    ins_probs, del_probs, sub_probs = get_edit_distributions_percents(
+        noised, clean)
+    noise_outside_clean_probs = get_percent_of_noise_outside_clean(
+        clean, noised)
+    digits_outside_clean_probs = get_percent_of_digit_noise_outside_clean(
+        clean, noised)
+    punc_outside_clean_probs = get_percent_of_punc_noise_outside_clean(
+        clean, noised)
+    alpha_outside_clean_probs = get_percent_of_alpha_noise_outside_clean(
+        clean, noised)
+    upper_outside_clean_probs = get_percent_of_upper_alpha_noise_outside_clean(
+        clean, noised)
+    lower_outside_clean_probs = get_percent_of_lower_alpha_noise_outside_clean(
+        clean, noised)
+    vowel_outside_clean_probs = get_percent_of_vowel_noise_outside_clean(
+        clean, noised)
+    consonants_outside_clean_probs = get_percent_of_consonants_noise_outside_clean(
+        clean, noised)
+    return torch.FloatTensor([ins_probs, del_probs, sub_probs, noise_outside_clean_probs, digits_outside_clean_probs, punc_outside_clean_probs, alpha_outside_clean_probs, upper_outside_clean_probs, lower_outside_clean_probs, vowel_outside_clean_probs, consonants_outside_clean_probs]).to(DEVICE)
 
 
 to_save = {
@@ -146,8 +197,17 @@ criterion = nn.NLLLoss(ignore_index=PAD_IDX)
 decoder_opt = torch.optim.Adam(decoder.parameters(), lr=LR)
 encoder_opt = torch.optim.Adam(encoder.parameters(), lr=LR)
 
+if OBS_FILE is not None:
+    obs_df = pd.read_csv(OBS_FILE)
+    obs_stats_sum_tensor = get_summary_stats_tensor(
+        list(obs_df['Noised']), list(obs_df['Correct']))
+else:
+    obs_stats_sum_tensor = torch.FloatTensor([1.8526e-01, 2.6551e-01, 5.4923e-01, 5.4276e-01, 2.2182e-04, 1.5038e-02,
+                                              5.1833e-01, 2.9150e-02, 4.8918e-01, 2.2695e-01, 2.9138e-01]).to(DEVICE)
+
 df = pd.read_csv(TRAIN_FILE)
-ds = WordDataset(df)
-dl = DataLoader(ds, batch_size=BATCH_SZ, shuffle=True)
+ds = NameDataset(df)
+
+dl = DataLoader(ds, batch_size=MINI_BATCH_SZ, shuffle=True)
 
 iter_train(dl)
