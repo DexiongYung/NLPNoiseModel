@@ -198,13 +198,13 @@ else:
     # M Teng suggests using Xavier for weight init
     for name, param in decoder.lstm.named_parameters():
         if 'bias' in name:
-            nn.init.constant_.nn.init.constant(param, 0.0)
+            nn.init.constant(param, 0.0)
         elif 'weight' in name:
             nn.init.xavier_normal(param)
 
     for name, param in encoder.lstm.named_parameters():
         if 'bias' in name:
-            nn.init.constant_.nn.init.constant(param, 0.0)
+            nn.init.constant(param, 0.0)
         elif 'weight' in name:
             nn.init.xavier_normal(param)
 
