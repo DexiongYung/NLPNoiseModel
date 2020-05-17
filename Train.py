@@ -135,9 +135,9 @@ encoder = Encoder(NUM_CHARS, HIDDEN_SZ, PAD_IDX,
 
 if args.continue_training:
     encoder.load_state_dict(torch.load(
-        f'Checkpoints/NLL/{NAME}_encoder.path.tar')['weights'])
+        f'Checkpoints/{NAME}_encoder.path.tar')['weights'])
     decoder.load_state_dict(torch.load(
-        f'Checkpoints/NLL/{NAME}_decoder.path.tar')['weights'])
+        f'Checkpoints/{NAME}_decoder.path.tar')['weights'])
 
 
 criterion = nn.NLLLoss(ignore_index=PAD_IDX)

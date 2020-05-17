@@ -1,6 +1,6 @@
 import torch
 import math
-from Constants import *
+from Constants import DEVICE
 
 
 def indexTensor(names: list, max_len: int, allowed_chars: list):
@@ -40,18 +40,18 @@ def targetTensor(names: list, max_len: int, allowed_chars: list):
     return ret
 
 
-def top_k_beam_search(decoder, hidden: torch.Tensor, k: int = 15, penalty: float = 4.0):
-    input = targetTensor([SOS], 1, CHARACTERS).to(DEVICE)
+def top_k_beam_search(decoder, hidden: torch.Tensor, in_vocab: list, out_vocab: list, sos: str, pad: str, eos: str, k: int = 15, penalty: float = 4.0):
+    input = targetTensor([sos], 1, in_vocab).to(DEVICE)
     output, hidden = decoder.forward(input, hidden)
-    output = output.reshape(NUM_CHARS)
+    output = output.reshape(len(out_vocab))
     probs = torch.exp(output)
-    EOS_idx = CHARACTERS.index(EOS)
+    EOS_idx = out_vocab.index(eos)
     probs[EOS_idx] = 0
     top_k_probs, top_k_idx = torch.topk(probs, k, dim=0)
 
     top_k = []
     for i in range(len(top_k_idx)):
-        prev_char = CHARACTERS[top_k_idx[i].item()]
+        prev_char = out_vocab[top_k_idx[i].item()]
 
         if i == 0:
             top_k.append(
@@ -60,16 +60,16 @@ def top_k_beam_search(decoder, hidden: torch.Tensor, k: int = 15, penalty: float
             top_k.append(
                 ([prev_char], -math.log(top_k_probs[i].item()), hidden))
 
-    while not is_EOS_in_all_topk(top_k):
+    while not is_EOS_in_all_topk(top_k, eos):
         hypotheses = []
 
         for name, score, hidden in top_k:
-            if EOS in name:
+            if eos in name:
                 hidden_clone = (hidden[0].clone(), hidden[1].clone())
                 hypotheses.append((name.copy(), score, hidden_clone))
             else:
                 prev_char = name[-1]
-                input = targetTensor([prev_char], 1, CHARACTERS).to(DEVICE)
+                input = targetTensor([prev_char], 1, in_vocab).to(DEVICE)
                 output, hidden = decoder.forward(input, hidden)
                 hidden_clone = (hidden[0].clone(), hidden[1].clone())
                 probs = torch.exp(output)
@@ -78,7 +78,7 @@ def top_k_beam_search(decoder, hidden: torch.Tensor, k: int = 15, penalty: float
                 top_k_idx = top_k_idx.reshape(k)
 
                 for i in range(len(top_k_probs)):
-                    current_char = CHARACTERS[top_k_idx[i]]
+                    current_char = out_vocab[top_k_idx[i]]
                     current_prob = top_k_probs[i]
                     name_copy = name.copy()
                     name_copy.append(current_char)
@@ -93,19 +93,19 @@ def top_k_beam_search(decoder, hidden: torch.Tensor, k: int = 15, penalty: float
     return top_k
 
 
-def top_k_beam_search_graph(decoder, hidden: torch.Tensor, k: int = 6, penalty: float = 4.0):
-    input = targetTensor([SOS], 1, CHARACTERS).to(DEVICE)
+def top_k_beam_search_graph(decoder, hidden: torch.Tensor, in_vocab: list, out_vocab: list, sos: str, pad: str, eos: str, k: int = 6, penalty: float = 4.0):
+    input = targetTensor([sos], 1, in_vocab).to(DEVICE)
     output, hidden = decoder.forward(input, hidden)
-    output = output.reshape(NUM_CHARS)
+    output = output.reshape(len(out_vocab))
     probs = torch.exp(output)
-    EOS_idx = CHARACTERS.index(EOS)
+    EOS_idx = out_vocab.index(eos)
     probs[EOS_idx] = 0
     top_k_probs, top_k_idx = torch.topk(probs, k, dim=0)
 
     top_k = []
     prev_chars = []
     for i in range(len(top_k_idx)):
-        prev_char = CHARACTERS[top_k_idx[i].item()]
+        prev_char = out_vocab[top_k_idx[i].item()]
 
         if i == 0:
             top_k.append(
@@ -116,13 +116,13 @@ def top_k_beam_search_graph(decoder, hidden: torch.Tensor, k: int = 6, penalty: 
 
         prev_chars.append(prev_char)
 
-    while EOS not in prev_chars:
+    while eos not in prev_chars:
         prev_chars = []
         hypotheses = []
 
         for name, score, hidden in top_k:
             prev_char = name[-1]
-            input = targetTensor([prev_char], 1, CHARACTERS).to(DEVICE)
+            input = targetTensor([prev_char], 1, in_vocab).to(DEVICE)
             output, hidden = decoder.forward(input, hidden)
             probs = torch.exp(output)
             top_k_probs, top_k_idx = torch.topk(probs, k, dim=2)
@@ -130,7 +130,7 @@ def top_k_beam_search_graph(decoder, hidden: torch.Tensor, k: int = 6, penalty: 
             top_k_idx = top_k_idx.reshape(k)
 
             for i in range(len(top_k_probs)):
-                current_char = CHARACTERS[top_k_idx[i]]
+                current_char = out_vocab[top_k_idx[i]]
                 current_prob = top_k_probs[i]
                 name_copy = name.copy()
                 name_copy.append(current_char)
@@ -145,12 +145,12 @@ def top_k_beam_search_graph(decoder, hidden: torch.Tensor, k: int = 6, penalty: 
     return top_k
 
 
-def is_EOS_in_all_topk(topk: list):
+def is_EOS_in_all_topk(topk: list, eos: str):
     '''
         Topk contains a tuple of (name, score, hidden state)
     '''
     for name, _, _ in topk:
-        if EOS not in name:
+        if eos not in name:
             return False
     return True
 

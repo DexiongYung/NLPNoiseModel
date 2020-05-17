@@ -191,9 +191,9 @@ encoder = Encoder(NUM_CHARS, HIDDEN_SZ, PAD_IDX,
 
 if args.continue_training:
     encoder.load_state_dict(torch.load(
-        f'Checkpoints/ABC/{NAME}_encoder.path.tar')['weights'])
+        f'Checkpoints/{NAME}_encoder.path.tar')['weights'])
     decoder.load_state_dict(torch.load(
-        f'Checkpoints/ABC/{NAME}_decoder.path.tar')['weights'])
+        f'Checkpoints/{NAME}_decoder.path.tar')['weights'])
 else:
     # M Teng suggests using Xavier for weight init
     for name, param in decoder.lstm.named_parameters():

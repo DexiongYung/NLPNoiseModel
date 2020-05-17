@@ -49,27 +49,27 @@ def test(x: list):
 
     src_x = [c for c in x[0]]
 
-    src = indexTensor(x, name_length, CHARACTERS).to(DEVICE)
+    src = indexTensor(x, name_length, input).to(DEVICE)
     lng = lengthTensor(x).to(DEVICE)
 
     hidden = encoder.forward(src, lng)
 
     name = ''
 
-    lstm_input = targetTensor([SOS], 1, CHARACTERS).to(DEVICE)
+    lstm_input = targetTensor([SOS], 1, output).to(DEVICE)
     sampled_char = SOS
     for i in range(100):
         decoder_out, hidden = decoder.forward(lstm_input, hidden)
-        decoder_out = decoder_out.reshape(NUM_CHARS)
+        decoder_out = decoder_out.reshape(output_sz)
         lstm_probs = torch.softmax(decoder_out, dim=0)
         sample = int(torch.distributions.Categorical(lstm_probs).sample())
-        sampled_char = CHARACTERS[sample]
+        sampled_char = output[sample]
 
         if sampled_char == EOS:
             break
 
         name += sampled_char
-        lstm_input = targetTensor([sampled_char], 1, CHARACTERS).to(DEVICE)
+        lstm_input = targetTensor([sampled_char], 1, output).to(DEVICE)
 
     return name
 
@@ -79,12 +79,12 @@ def test_w_beam(x: list):
 
     src_x = [c for c in x[0]]
 
-    src = indexTensor(x, name_length, CHARACTERS).to(DEVICE)
+    src = indexTensor(x, name_length, input).to(DEVICE)
     lng = lengthTensor(x).to(DEVICE)
 
     hidden = encoder.forward(src, lng)
 
-    return [''.join(c for c in name[:-1]) for name, score, hidden in top_k_beam_search(decoder, hidden, K)]
+    return [''.join(c for c in name[:-1]) for name, score, hidden in top_k_beam_search(decoder, hidden, input, output, SOS, PAD, EOS, K)]
 
 
 def noise_test(in_path: str, out_path: str):
@@ -136,4 +136,4 @@ def get_levenshtein_beam_winner(name: str):
     return get_levenshtein_winner(noised_strs, name)
 
 
-print(test_w_beam(['McWilliams']))
+print(test([NAME]))
