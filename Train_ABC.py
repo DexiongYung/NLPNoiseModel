@@ -56,6 +56,7 @@ PRINTS = args.print
 MINI_BATCH_SZ = args.mini_batch
 CLIP = 1
 
+# SOS, PAD, EOS should be single char cause Levenshtein distance seq goes through string and compares letters
 SOS = chr(0x00FD)
 PAD = chr(0x00FE)
 EOS = chr(0x00FF)
@@ -66,12 +67,11 @@ PAD_IDX = CHARACTERS.index(PAD)
 
 def train(x: list):
     loss = 0
-    max_len = len(max(x, key=len))
+    padded_len = len(max(x, key=len))
 
-    src_x = list(map(lambda s: [char for char in s] +
-                     [PAD] * (max_len - len(s)), x))
-
-    src = indexTensor(src_x, max_len, CHARACTERS).to(DEVICE)
+    padded_x = list(map(lambda s: [char for char in s] +
+                        [PAD] * (padded_len - len(s)), x))
+    src = indexTensor(padded_x, padded_len, CHARACTERS).to(DEVICE)
     lng = lengthTensor(x).to(DEVICE)
 
     hidden = encoder.forward(src, lng)
@@ -79,8 +79,8 @@ def train(x: list):
     lstm_input = targetTensor([SOS] * MINI_BATCH_SZ, 1, CHARACTERS).to(DEVICE)
     names = [''] * MINI_BATCH_SZ
 
-    # max_len + 1 since as length of word increases the Levenshtein distance size goes down
-    for i in range(max_len + 1):
+    # padded_len + 1 since as length of word increases the Levenshtein distance size goes down
+    for i in range(padded_len + 1):
         lstm_probs, hidden = decoder.forward(lstm_input, hidden)
         categorical = torch.distributions.Categorical(probs=lstm_probs[0])
         samples = categorical.sample()
@@ -94,25 +94,25 @@ def train(x: list):
     return names, loss
 
 
-def iter_train(dl: DataLoader, path: str = "Checkpoints/"):
+def iterate_train(dl: DataLoader, path: str = "Checkpoints/"):
     all_losses = []
     total_loss = 0
-    batch_loss = 0
-    count = 0
+    num_model_iterations = 0
     cleaned_list = []
     noised_list = []
 
     for iter in range(1, ITER + 1):
+        batch_loss = 0
         for x in dl:
             padded_x_len = len(max(x, key=len))
-            count = count + 1
+            num_model_iterations = num_model_iterations + 1
             generated_names, loss = train(x)
 
             cleaned_list += x
             noised_list += [name.split(EOS)[0] for name in generated_names]
             batch_loss += loss
 
-            if count % BATCH_SZ:
+            if num_model_iterations % BATCH_SZ:
                 encoder_opt.zero_grad()
                 decoder_opt.zero_grad()
 
@@ -135,7 +135,7 @@ def iter_train(dl: DataLoader, path: str = "Checkpoints/"):
                 noised_list = []
                 batch_loss = 0
 
-            if count % PRINTS == 0:
+            if num_model_iterations % PRINTS == 0:
                 all_losses.append(total_loss / PRINTS)
                 total_loss = 0
                 plot_losses(
@@ -194,9 +194,20 @@ if args.continue_training:
         f'Checkpoints/ABC/{NAME}_encoder.path.tar')['weights'])
     decoder.load_state_dict(torch.load(
         f'Checkpoints/ABC/{NAME}_decoder.path.tar')['weights'])
+else:
+    # M Teng suggests using Xavier for weight init
+    for name, param in decoder.lstm.named_parameters():
+        if 'bias' in name:
+            nn.init.constant(param, 0.0)
+        elif 'weight' in name:
+            nn.init.xavier_normal(param)
 
+    for name, param in encoder.lstm.named_parameters():
+        if 'bias' in name:
+            nn.init.constant(param, 0.0)
+        elif 'weight' in name:
+            nn.init.xavier_normal(param)
 
-criterion = nn.NLLLoss(ignore_index=PAD_IDX)
 decoder_opt = torch.optim.Adam(decoder.parameters(), lr=LR)
 encoder_opt = torch.optim.Adam(encoder.parameters(), lr=LR)
 
@@ -213,4 +224,4 @@ ds = NameDataset(df)
 
 dl = DataLoader(ds, batch_size=MINI_BATCH_SZ, shuffle=True)
 
-iter_train(dl)
+iterate_train(dl)
