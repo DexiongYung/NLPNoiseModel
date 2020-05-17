@@ -239,7 +239,7 @@ def get_points_for_edit_idx_to_clean_length(clean: list, noise: list):
 
         x.extend([len(clean_word)] * len(idxes_list))
         y.extend(idxes_list)
-    
+
     # x representes the list of clean word length, y is the index in the word that had the error
     return x, y
 
