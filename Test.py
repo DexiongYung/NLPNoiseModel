@@ -44,7 +44,37 @@ encoder.eval()
 decoder.eval()
 
 
-def test(x: list):
+def test_argmax(x: list):
+    name_length = len(x[0])
+
+    src_x = [c for c in x[0]]
+
+    src = indexTensor(x, name_length, input).to(DEVICE)
+    lng = lengthTensor(x).to(DEVICE)
+
+    hidden = encoder.forward(src, lng)
+
+    name = ''
+
+    lstm_input = targetTensor([SOS], 1, output).to(DEVICE)
+    maxed_char = SOS
+    for i in range(100):
+        decoder_out, hidden = decoder.forward(lstm_input, hidden)
+        decoder_out = decoder_out.reshape(output_sz)
+        lstm_probs = torch.softmax(decoder_out, dim=0)
+        maxes = lstm_probs.max(dim=2)
+        maxed_char = output[maxes]
+
+        if maxed_char == EOS:
+            break
+
+        name += maxed_char
+        lstm_input = targetTensor([maxed_char], 1, output).to(DEVICE)
+
+    return name
+
+
+def test_sample(x: list):
     name_length = len(x[0])
 
     src_x = [c for c in x[0]]
