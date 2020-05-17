@@ -2,7 +2,8 @@ import math
 import time
 import pandas
 import matplotlib.pyplot as plt
-from Utilities.Convert import levenshtein
+import matplotlib
+from Utilities.Distance import levenshtein
 
 
 def plot_losses(loss: list, x_label: str, y_label: str, folder: str = "Result", filename: str = None):
@@ -59,4 +60,15 @@ def show_pie_of_levenshtein(df: pandas.DataFrame, title: str):
 
     ax.set_title(title)
 
+    plt.show()
+
+
+def show_scatter_plot(x: list, y: list, x_label: str, y_label: str):
+    plt.scatter(x, y, color='g')
+    yint = range(min(y), max(y) + 1)
+    xint = range(min(x), max(x) + 1)
+    matplotlib.pyplot.yticks(yint)
+    matplotlib.pyplot.xticks(xint)
+    plt.xlabel(x_label)
+    plt.ylabel(y_label)
     plt.show()
