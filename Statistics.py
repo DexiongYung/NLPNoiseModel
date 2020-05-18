@@ -9,7 +9,7 @@ from Utilities.Plot import *
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--file_path', help='Path to csv file with noised and clean columns',
-                    nargs='?', default='Data/mispelled_best.csv', type=str)
+                    nargs='?', default='Data/mispelled_pure_noised.csv', type=str)
 args = parser.parse_args()
 file_path = args.file_path
 
@@ -61,6 +61,31 @@ def get_edit_distributions_percents(noiseds: list, cleans: list):
     total = ins_total + dels_total + subs_total
 
     return float(ins_total/total), float(dels_total/total), float(subs_total/total)
+
+
+def get_edit_percents_distribution(noiseds: list, cleans: list):
+    clean_len = len(cleans)
+    noise_len = len(noiseds)
+
+    if clean_len != noise_len:
+        raise Exception('Clean list and noise list are not the same length')
+
+    sub_percents = []
+    del_percents = []
+    ins_percents = []
+
+    for idx in range(clean_len):
+        noised = str(noiseds[idx])
+        correct = str(cleans[idx])
+
+        ins, dels, subs = get_levenshtein_w_counts(noised, correct)
+        total = ins + dels + subs
+
+        del_percents.append(float(dels/total))
+        sub_percents.append(float(subs/total))
+        ins_percents.append(float(ins/total))
+
+    return ins_percents, sub_percents, del_percents
 
 
 def get_percent_of_noise_outside_clean(clean: list, noise: list):
@@ -229,3 +254,19 @@ def get_percent_of_duplicate_char_noise(clean: list, noise: list):
 df = pandas.read_csv(file_path)
 correct_list = list(df.Correct)
 noised_list = list(df.Noised)
+
+ins_per_list, subs_per_list, del_per_list = get_edit_percents_distribution(noised_list, correct_list)
+
+data = []
+
+for percent in ins_per_list:
+    data.append([percent, 'ins'])
+
+for percent in subs_per_list:
+    data.append([percent, 'sub'])
+
+for percent in del_per_list:
+    data.append([percent, 'del'])
+
+df = pandas.DataFrame(data, columns=['percent', 'edit'])
+show_box_plot(df, 'percent', 'edit', 'Statistics/edit_percents_boxplot.png')

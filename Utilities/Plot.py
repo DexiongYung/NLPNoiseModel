@@ -74,6 +74,6 @@ def show_scatter_plot(x: list, y: list, x_label: str, y_label: str):
     plt.show()
 
 
-def show_box_plot(df: pandas.DataFrame, column: str, by: str):
+def show_box_plot(df: pandas.DataFrame, column: str, by: str, save_pth: str):
     df.boxplot(column=column, by=by)
-    plt.savefig('Statistics/Boxplot')
+    plt.savefig(save_pth)
