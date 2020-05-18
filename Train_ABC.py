@@ -122,7 +122,7 @@ def iterate_train(dl: DataLoader, path: str = "Checkpoints/"):
                     sample_stats_sum_tensor, obs_stats_sum_tensor, p=2)
 
                 # batch_loss is the logprob so will be negative needs to positive, because backward reduces loss
-                ABC_loss = -1 * torch.sum(batch_loss)
+                ABC_loss = torch.sum(batch_loss)
                 ABC_loss *= distance.item()
                 ABC_loss.backward()
 
