@@ -119,11 +119,11 @@ def iterate_train(dl: DataLoader, path: str = "Checkpoints/"):
                 sample_stats_sum_tensor = get_summary_stats_tensor(
                     noised_list, cleaned_list)
                 distance = torch.dist(
-                    sample_stats_sum_tensor, obs_stats_sum_tensor, p=2)
+                    sample_stats_sum_tensor, obs_stats_sum_tensor, p=2).detach()
 
                 # batch_loss is the logprob so will be negative needs to positive, because backward reduces loss
                 ABC_loss = -1 * torch.sum(batch_loss)
-                ABC_loss *= distance.item().detach()
+                ABC_loss *= distance.item()
                 ABC_loss.backward()
 
                 encoder_opt.step()
