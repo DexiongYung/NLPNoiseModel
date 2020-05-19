@@ -255,7 +255,8 @@ df = pandas.read_csv(file_path)
 correct_list = list(df.Correct)
 noised_list = list(df.Noised)
 
-ins_per_list, subs_per_list, del_per_list = get_edit_percents_distribution(noised_list, correct_list)
+ins_per_list, subs_per_list, del_per_list = get_edit_percents_distribution(
+    noised_list, correct_list)
 
 data = []
 
