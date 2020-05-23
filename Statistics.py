@@ -7,11 +7,33 @@ from collections import Counter
 from Utilities.Distance import *
 from Utilities.Plot import *
 
-parser = argparse.ArgumentParser()
-parser.add_argument('--file_path', help='Path to csv file with noised and clean columns',
-                    nargs='?', default='Data/mispelled_pure_noised.csv', type=str)
-args = parser.parse_args()
-file_path = args.file_path
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--file_path', help='Path to csv file with noised and clean columns',
+                        nargs='?', default='Data/mispelled_pure_noised.csv', type=str)
+    args = parser.parse_args()
+    file_path = args.file_path
+
+    df = pandas.read_csv(file_path)
+    correct_list = list(df.Correct)
+    noised_list = list(df.Noised)
+
+    ins_per_list, subs_per_list, del_per_list = get_edit_percents_distribution(
+        noised_list, correct_list)
+
+    data = []
+
+    for percent in ins_per_list:
+        data.append([percent, 'ins'])
+
+    for percent in subs_per_list:
+        data.append([percent, 'sub'])
+
+    for percent in del_per_list:
+        data.append([percent, 'del'])
+
+    df = pandas.DataFrame(data, columns=['percent', 'edit'])
+    show_box_plot(df, 'percent', 'edit', 'Statistics/edit_percents_boxplot.png')
 
 
 def get_levenshtein_stats(noiseds: list, cleans: list):
@@ -250,24 +272,3 @@ def get_percent_of_duplicate_char_noise(clean: list, noise: list):
 
     return float(duplicated_char_count/total_edit_count)
 
-
-df = pandas.read_csv(file_path)
-correct_list = list(df.Correct)
-noised_list = list(df.Noised)
-
-ins_per_list, subs_per_list, del_per_list = get_edit_percents_distribution(
-    noised_list, correct_list)
-
-data = []
-
-for percent in ins_per_list:
-    data.append([percent, 'ins'])
-
-for percent in subs_per_list:
-    data.append([percent, 'sub'])
-
-for percent in del_per_list:
-    data.append([percent, 'del'])
-
-df = pandas.DataFrame(data, columns=['percent', 'edit'])
-show_box_plot(df, 'percent', 'edit', 'Statistics/edit_percents_boxplot.png')
