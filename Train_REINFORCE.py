@@ -118,7 +118,7 @@ def iterate_train(dl: DataLoader, path: str = "Checkpoints/"):
             distance = torch.dist(sample_stats_sum_tensor, obs_stats_sum_tensor, p=2).detach()
 
             # Let the gradient flow through REINFORCE loss without changing the visible loss (distance)
-            reinforce_loss = distance + (distance * total_log_prob_sum) - (distance * total_log_prob_sum).detach()
+            reinforce_loss = -1 * distance + (distance * total_log_prob_sum) - (distance * total_log_prob_sum).detach()
             reinforce_loss.backward()
 
             encoder_opt.step()
