@@ -1,274 +1,75 @@
-import pandas
-import string
-import argparse
-import numpy as np
-import matplotlib.pyplot as plt
-from collections import Counter
-from Utilities.Distance import *
-from Utilities.Plot import *
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--file_path', help='Path to csv file with noised and clean columns',
-                        nargs='?', default='Data/mispelled_pure_noised.csv', type=str)
-    args = parser.parse_args()
-    file_path = args.file_path
-
-    df = pandas.read_csv(file_path)
-    correct_list = list(df.Correct)
-    noised_list = list(df.Noised)
-
-    ins_per_list, subs_per_list, del_per_list = get_edit_percents_distribution(
-        noised_list, correct_list)
-
-    data = []
-
-    for percent in ins_per_list:
-        data.append([percent, 'ins'])
-
-    for percent in subs_per_list:
-        data.append([percent, 'sub'])
-
-    for percent in del_per_list:
-        data.append([percent, 'del'])
-
-    df = pandas.DataFrame(data, columns=['percent', 'edit'])
-    show_box_plot(df, 'percent', 'edit', 'Statistics/edit_percents_boxplot.png')
-
-
-def get_levenshtein_stats(noiseds: list, cleans: list):
-    clean_len = len(cleans)
-    noise_len = len(noiseds)
-
-    if clean_len != noise_len:
-        raise Exception('Clean list and noise list are not the same length')
-
-    counts_dict = dict()
-
-    for idx in range(clean_len):
-        noised = str(noiseds[idx])
-        correct = str(cleans[idx])
-
-        distance = levenshtein(noised, correct)
-
-        if distance in counts_dict.keys():
-            counts_dict[distance] += 1
-        else:
-            counts_dict[distance] = 1
-
-    for key in counts_dict.keys():
-        counts_dict[key] = round(counts_dict[key] / clean_len, 4)
-
-    return counts_dict
-
-
-def get_edit_distributions_percents(noiseds: list, cleans: list):
-    clean_len = len(cleans)
-    noise_len = len(noiseds)
-
-    if clean_len != noise_len:
-        raise Exception('Clean list and noise list are not the same length')
-
-    ins_total, dels_total, subs_total, total = 0, 0, 0, 0
-
-    for idx in range(clean_len):
-        noised = str(noiseds[idx])
-        correct = str(cleans[idx])
-
-        ins, dels, subs = get_levenshtein_w_counts(noised, correct)
-        ins_total += ins
-        dels_total += dels
-        subs_total += subs
-
-    total = ins_total + dels_total + subs_total
-
-    return float(ins_total/total), float(dels_total/total), float(subs_total/total)
-
-
-def get_edit_percents_distribution(noiseds: list, cleans: list):
-    clean_len = len(cleans)
-    noise_len = len(noiseds)
-
-    if clean_len != noise_len:
-        raise Exception('Clean list and noise list are not the same length')
-
-    sub_percents = []
-    del_percents = []
-    ins_percents = []
-
-    for idx in range(clean_len):
-        noised = str(noiseds[idx])
-        correct = str(cleans[idx])
-
-        ins, dels, subs = get_levenshtein_w_counts(noised, correct)
-        total = ins + dels + subs
-
-        del_percents.append(float(dels/total))
-        sub_percents.append(float(subs/total))
-        ins_percents.append(float(ins/total))
-
-    return ins_percents, sub_percents, del_percents
-
-
-def get_percent_of_noise_outside_clean(clean: list, noise: list):
-    return get_percent(clean, noise, string.printable)
-
-
-def get_percent_of_digit_noise_outside_clean(clean: list, noise: list):
-    return get_percent(clean, noise, string.digits)
-
-
-def get_percent_of_white_space_outside_clean(clean: list, noise: list):
-    return get_percent(clean, noise, string.whitespace)
-
-
-def get_percent_of_punc_noise_outside_clean(clean: list, noise: list):
-    return get_percent(clean, noise, string.punctuation)
-
-
-def get_percent_of_alpha_noise_outside_clean(clean: list, noise: list):
-    return get_percent(clean, noise, string.ascii_letters)
-
-
-def get_percent_of_upper_alpha_noise_outside_clean(clean: list, noise: list):
-    return get_percent(clean, noise, string.ascii_uppercase)
-
-
-def get_percent_of_lower_alpha_noise_outside_clean(clean: list, noise: list):
-    return get_percent(clean, noise, string.ascii_lowercase)
-
-
-def get_percent_of_vowel_noise_outside_clean(clean: list, noise: list):
-    return get_percent(clean, noise, 'aeiouAEIOU')
-
-
-def get_percent_of_consonants_noise_outside_clean(clean: list, noise: list):
-    set_of_letters = ''.join(
-        [c for c in string.ascii_letters if c not in 'aeiouAEIOU'])
-
-    return get_percent(clean, noise, set_of_letters)
-
-
-def get_percent(clean_lst: list, noised_lst: list, exclusion_str: str):
-    clean_len = len(clean_lst)
-    noise_len = len(noised_lst)
-
-    levenshtein_sum, outside_count = 0, 0
-
-    if clean_len != noise_len:
-        raise Exception('Clean list and noise list are not the same length')
-    else:
-        length = clean_len
-
-    for idx in range(length):
-        noised_word = str(noised_lst[idx])
-        clean_word = str(clean_lst[idx])
-
-        levenshtein_sum += levenshtein(clean_word, noised_word)
-        outside_count += count_outside_clean_in_noisy_in_set(
-            clean_word, noised_word, exclusion_str)
-
-    return float(outside_count/levenshtein_sum)
-
-
-def count_outside_clean_in_noisy_in_set(clean: str, noisy: str, set_str: str):
-    outside_count = 0
-
-    for char in noisy:
-        if char not in clean and char in set_str:
-            outside_count += 1
-
-    return outside_count
-
-
-def get_points_for_edit_idx_to_clean_length(clean: list, noise: list):
-    clean_len = len(clean)
-    noise_len = len(noise)
-    x, y = [], []
-
-    if clean_len != noise_len:
-        raise Exception('Clean list and noise list are not the same length')
-
-    for idx in range(clean_len):
-        noised_word = str(noise[idx])
-        clean_word = str(clean[idx])
-
-        idxes_list = get_indexes_of_edits(clean_word, noised_word)
-
-        x.extend([len(clean_word)] * len(idxes_list))
-        y.extend(idxes_list)
-
-    # x representes the list of clean word length, y is the index in the word that had the error
-    return x, y
-
-
-def get_stats_of_noised_len_to_clean(clean: list, noise: list):
-    '''
-    Gets stats on length of noised compared to clean representation. Divided into 3 categories 'larger', 'smaller' and 'equal'
-    in length
-    '''
-    clean_len = len(clean)
-    noise_len = len(noise)
-
-    if clean_len != noise_len:
-        raise Exception('Clean list and noise list are not the same length')
-
-    count_smaller = 0
-    count_equal = 0
-    count_larger = 0
-
-    for i in range(clean_len):
-        clean_word_len = len(str(clean[i]))
-        noised_word_len = len(str(noise[i]))
-
-        if noised_word_len > clean_word_len:
-            count_larger += 1
-        elif noised_word_len < clean_word_len:
-            count_smaller += 1
-        else:
-            count_equal += 1
-
-    return float(count_larger/clean_len), float(count_smaller/clean_len), float(count_equal/clean_len)
-
-
-def get_percent_of_duplicate_char_noise(clean: list, noise: list):
-    clean_len = len(clean)
-    noise_len = len(noise)
-
-    duplicated_char_count = 0
-    total_edit_count = 0
-
-    if clean_len != noise_len:
-        raise Exception('Clean list and noise list are not the same length')
-
-    for i in range(clean_len):
-        clean_word = str(clean[i])
-        noised_word = str(noise[i])
-
-        total_edit_count += levenshtein(clean_word, noised_word)
-
-        def get_letter_count_dict(word: str):
-            letter_count_dict = dict()
-
-            for j in range(len(word)):
-                char = word[j]
-                letter_count_dict[char] = letter_count_dict[char] + \
-                    1 if char in letter_count_dict.keys() else 1
-
-            return letter_count_dict
-
-        clean_word_char_dict = get_letter_count_dict(clean_word)
-        noised_word_char_dict = get_letter_count_dict(noised_word)
-
-        for key in clean_word_char_dict.keys():
-            noised_key_count = noised_word_char_dict[key] if key in noised_word_char_dict.keys(
-            ) else 0
-            clean_key_count = clean_word_char_dict[key]
-
-            difference = clean_key_count - noised_key_count
-
-            if difference < 0:
-                duplicated_char_count += abs(difference)
-
-    return float(duplicated_char_count/total_edit_count)
-
+import torch
+
+# Levenshtein distance between clean and noisy word given the length (length is at the end of name
+distance = {
+    'lev_dist_1': [0.4533, 0.5422, 0.0042, 0.0, 0.0, 0.0, 0.0],
+    'lev_dist_2': [0.8052, 0.1844, 0.0081, 0.0016, 0.0004, 0.0003, 0.0],
+    'lev_dist_3': [0.7444, 0.2145, 0.0339, 0.0046, 0.0013, 0.0006, 0.0006],
+    'lev_dist_4': [0.6628, 0.2792, 0.0421, 0.0129, 0.002, 0.0007, 0.0002],
+    'lev_dist_5': [0.6928, 0.2378, 0.0473, 0.0161, 0.0047, 0.0009, 0.0003],
+    'lev_dist_6': [0.6954, 0.2129, 0.058, 0.0228, 0.0081, 0.002, 0.0007],
+    'lev_dist_7': [0.6867, 0.2057, 0.0585, 0.0291, 0.0137, 0.0048, 0.0012],
+    'lev_dist_8': [0.6087, 0.2324, 0.0784, 0.0451, 0.022, 0.0094, 0.0034],
+    'lev_dist_9': [0.6025, 0.2053, 0.0857, 0.0537, 0.0287, 0.0155, 0.0082],
+    'lev_dist_10': [0.5337, 0.2179, 0.109, 0.0655, 0.0392, 0.0218, 0.0121],
+    'lev_dist_11': [0.5588, 0.1958, 0.1035, 0.0693, 0.0372, 0.0237, 0.0111],
+    'lev_dist_12': [0.4281, 0.2432, 0.1418, 0.0893, 0.0509, 0.0296, 0.0168],
+    'lev_dist_13': [0.4592, 0.1926, 0.1171, 0.0926, 0.0705, 0.0401, 0.0277],
+    'lev_dist_14': [0.5301, 0.208, 0.1142, 0.0651, 0.0394, 0.0292, 0.0141],
+    'lev_dist_15': [0.3894, 0.2864, 0.1636, 0.0864, 0.0394, 0.0152, 0.0167],
+    'lev_dist_16': [0.8829, 0.0878, 0.0049, 0.0146, 0.0098, 0.0, 0.0],
+    'lev_dist_17': [0.9024, 0.0732, 0.0244, 0.0, 0.0, 0.0, 0.0],
+    'lev_dist_18': [0.7609, 0.1739, 0.0, 0.0435, 0.0, 0.0, 0.0217],
+    'lev_dist_19': [1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+}
+
+# Edit type (insertion, deletion, substitutions distribution given length
+edit = {
+    "edit_cate_1":
+    [0.6440632538193514, 0.0, 0.35593674618064863],
+    "edit_cate_2":
+    [0.26924446343373926, 0.02271594388663391, 0.7080395926796269],
+    "edit_cate_3":
+    [0.21225766835287582, 0.24605982631071083, 0.5416825053364134],
+    "edit_cate_4":
+    [0.2570691747572815, 0.20766080097087378, 0.5352700242718447],
+    "edit_cate_5":
+    [0.2555279881605293, 0.2404130756507356, 0.5040589361887351],
+    "edit_cate_6":
+    [0.21157256480232767, 0.2698920049696828, 0.5185354302279895],
+    "edit_cate_7":
+    [0.1800266289560953, 0.2690847743568115, 0.5508885966870932],
+    "edit_cate_8":
+    [0.16017893007120687, 0.2785466496257075, 0.5612744203030856],
+    "edit_cate_9":
+    [0.15604391123976882, 0.2825384529136555, 0.5614176358465757],
+    "edit_cate_10":
+    [0.13757361891529676, 0.28075395605611636, 0.5816724250285868],
+    "edit_cate_11":
+    [0.12153567615245346, 0.32793277935100507, 0.5505315444965415],
+    "edit_cate_12":
+    [0.09600997506234414, 0.3031131847799855, 0.6008768401576703],
+    "edit_cate_13":
+    [0.08923916338284328, 0.3617459836314035, 0.5490148529857533],
+    "edit_cate_14":
+    [0.11187520966118752, 0.35575310298557533, 0.5323716873532371],
+    "edit_cate_15":
+    [0.06349206349206349, 0.35361552028218696, 0.5828924162257496],
+    "edit_cate_16":
+    [0.05090311986863711, 0.2348111658456486, 0.7142857142857143],
+    "edit_cate_17":
+    [0.0, 0.8478260869565217, 0.15217391304347827],
+    "edit_cate_18":
+    [0.09090909090909091, 0.8939393939393939, 0.015151515151515152]
+}
+
+alpha_os_word_perc = 0.3262333403736625
+lower_vowel_os_word_perc = 0.1371845033978279
+upper_vowel_os_word_perc = 0.005717662437661721
+lower_consonants_os_word_perc = 0.1708350867140005
+upper_consonants_os_word_perc = 0.012636875609952636
+punc_os_word_perc = 0.009465066244724228
+white_sp_os_word_perc = 0.0042796848319091585
+digit_os_word_perc = 0.0001396133069380654
+char_within_word_perc = 1 - alpha_os_word_perc - \
+    punc_os_word_perc - white_sp_os_word_perc - digit_os_word_perc
