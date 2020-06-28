@@ -52,6 +52,10 @@ def sample_number_edits(word_len: int):
     return int(torch.distributions.Categorical(categorical).sample().item()) + 1
 
 
+def calculate_char_edit_probs(edit_len: int, word_len: int):
+    return float(edit_len / word_len)
+
+
 def sample_edit_types(word_len: int, num_edits: int):
     '''
         Sample the type of edits given the clean word length and number of edits
@@ -130,8 +134,10 @@ def sample_insertion_edit(char: str, chars_in_word: list):
     num_chars_in_word = len(chars_in_word)
 
     for c in chars_in_word:
-        if c is char:
+        if c is char and c in string.ascii_lowercase:
             categorical[all_chars.index(c)] = (1/2) * char_within_word_perc
+        elif c is char and c in string.ascii_uppercase: 
+            categorical[all_chars.index(c)] = 0
         else:
             categorical[all_chars.index(c)] = (1/2) * (
                 1/(num_chars_in_word - 1)) * char_within_word_perc
@@ -174,5 +180,35 @@ def sample_insertion_edit(char: str, chars_in_word: list):
     return all_chars[index]
 
 
+def noise_name(name: str):
+    name_len = len(name)
+    noised_name = ''
+    char_list = [c for c in name]
+    num_edits = sample_number_edits(name_len)
+    char_edit_probs = torch.FloatTensor(
+        [calculate_char_edit_probs(num_edits, name_len)])
+
+    edit_cate_dist = torch.FloatTensor(edit[f'edit_cate_{name_len}'])
+
+    for i in range(name_len):
+        is_edit = bool(torch.distributions.Bernoulli(
+            char_edit_probs).sample().item())
+        curr_char = name[i]
+
+        if is_edit:
+            edit_type = int(torch.distributions.Categorical(
+                edit_cate_dist).sample().item())
+
+            if edit_type is 0:
+                noised_name = noised_name + curr_char + \
+                    sample_insertion_edit(curr_char, char_list)
+            elif edit_type is 2:
+                noised_name += sample_substitution_edit(curr_char, char_list)
+        else:
+            noised_name += curr_char
+
+    return noised_name
+
+
 for i in range(10):
-    print(sample_substitution_edit('a', ['t', 'a', 'c', 'o']))
+    print(noise_name('Jinsoo'))

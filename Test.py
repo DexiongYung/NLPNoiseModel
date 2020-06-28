@@ -9,11 +9,11 @@ from Model.Seq2Seq import Encoder, Decoder
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--config', help='Config json CONFIG_NAME',
-                    nargs='?', default='REINFORCE', type=str)
+                    nargs='?', default='noise', type=str)
 parser.add_argument('--k', help='Number of width for beam search',
-                    nargs='?', default=101, type=int)
+                    nargs='?', default=6, type=int)
 parser.add_argument('--name', help='Name to test one',
-                    nargs='?', default='Jason', type=str)
+                    nargs='?', default='Jinsoo', type=str)
 
 args = parser.parse_args()
 CONFIG_NAME = args.config
@@ -168,4 +168,5 @@ def get_levenshtein_beam_winner(name: str):
     return get_levenshtein_winner(noised_strs, name)
 
 
-print(test_w_beam([NAME]))
+for i in range(10):
+    print(test_sample([NAME]))

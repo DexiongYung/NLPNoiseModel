@@ -275,12 +275,3 @@ def get_percent_of_duplicate_char_noise(clean: list, noise: list):
 
     return float(duplicated_char_count/total_edit_count)
 
-
-for i in range(1,19):
-    curr_df = df[df.Correct.str.len() == i]
-    correct_list = curr_df.Correct.tolist()
-    noised_list = curr_df.Noised.tolist()
-
-    ins, dels, subs = get_edit_distributions_percents(correct_list, noised_list)
-
-    print(f'length = {i}: & {ins} & {dels} & {subs} \\\\')

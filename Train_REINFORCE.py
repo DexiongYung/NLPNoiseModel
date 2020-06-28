@@ -3,6 +3,7 @@ import os
 import torch.nn as nn
 import argparse
 import pandas as pd
+import string
 from Constants import DEVICE
 from Utilities.Plot import *
 from Utilities.Convert import *
@@ -10,7 +11,7 @@ from Utilities.Json import *
 from torch.utils.data import DataLoader
 from Model.Seq2Seq import Encoder, Decoder
 from Dataset.NameDataset import NameDataset
-from Statistics import *
+from Statistics_Generator import *
 
 
 parser = argparse.ArgumentParser()
@@ -29,7 +30,7 @@ parser.add_argument('--num_layers', help='Number of layers',
 parser.add_argument('--train_file', help='File to train on',
                     nargs='?', default='Data/Name/Firsts.csv', type=str)
 parser.add_argument('--obs_file', help='File to observation summary statistics on',
-                    nargs='?', default=None, type=str)
+                    nargs='?', default='Data/mispelled_pure_noised.csv', type=str)
 parser.add_argument('--column', help='Column header of data',
                     nargs='?', default='name', type=str)
 parser.add_argument('--print', help='Print every',
@@ -83,7 +84,8 @@ def sample_model(x: list):
     # padded_len + 1 since as length of word increases the Levenshtein distance size goes down
     for i in range(padded_len + 1):
         lstm_probs, hidden = decoder.forward(lstm_input, hidden)
-        categorical = torch.distributions.Categorical(probs=lstm_probs.squeeze().exp())
+        categorical = torch.distributions.Categorical(
+            probs=lstm_probs.squeeze().exp())
         samples = categorical.sample()
         log_prob_sum += categorical.log_prob(samples).sum()
 
@@ -98,48 +100,56 @@ def sample_model(x: list):
 def iterate_train(dl: DataLoader, path: str = "Checkpoints/"):
     all_losses = []
     num_model_iterations = 0
+    total_log_prob_sum = 0.0
+    distance = 0.0
 
     for epoch_index in range(1, ITER + 1):
-        loss_so_far = 0
         for batch_index, x in enumerate(dl):
+            # Zero gradient in models
             encoder_opt.zero_grad()
             decoder_opt.zero_grad()
 
-            cleaned_list = []
-            noised_list = []
-            total_log_prob_sum = 0.
-            for sample_index in range(NUM_SAMPLE):
-                generated_names, log_prob_sum = sample_model(x)
-                cleaned_list += x
-                noised_list += [name.split(EOS)[0] for name in generated_names]
-                total_log_prob_sum += log_prob_sum
+            # Generate noised outputs
+            generated_names, log_prob_sum = sample_model(x)
 
-            sample_stats_sum_tensor = get_summary_stats_tensor(noised_list, cleaned_list)
-            distance = torch.dist(sample_stats_sum_tensor, obs_stats_sum_tensor, p=2).detach()
+            # Split generated names
+            noised_list = [name.split(EOS)[0] for name in generated_names]
 
-            # Let the gradient flow through REINFORCE loss without changing the visible loss (distance)
-            reinforce_loss = -1 * distance + (distance * total_log_prob_sum) - (distance * total_log_prob_sum).detach()
-            reinforce_loss.backward()
+            # Get summary stats of batch
+            sample_stats_sum_tensor = get_summary_stats_tensor(noised_list, x)
 
-            encoder_opt.step()
-            decoder_opt.step()
+            # Sum objective function values
+            total_log_prob_sum += log_prob_sum
+            distance += torch.dist(sample_stats_sum_tensor,
+                                   obs_stats_sum_tensor, p=2).detach()
 
-            loss_so_far += reinforce_loss.item()
+            if batch_index % NUM_SAMPLE == 0:
+                # Let the gradient flow through REINFORCE loss without changing the visible loss (distance) and divide by number of samples
+                reinforce_loss = (1/NUM_SAMPLE) * (distance + (distance *
+                                                               total_log_prob_sum) - (distance * total_log_prob_sum).detach())
+                reinforce_loss.backward()
 
-            if batch_index % PRINTS == 0:
-                print(f"Epoch {epoch_index} Batch {batch_index} Loss: {loss_so_far / PRINTS}")
-                all_losses.append(loss_so_far / PRINTS)
-                loss_so_far = 0.
+                encoder_opt.step()
+                decoder_opt.step()
+
+                # Save weights and print loss
+                print(
+                    f"Loss: {reinforce_loss.item() / NUM_SAMPLE}")
+                all_losses.append(reinforce_loss.item() / NUM_SAMPLE)
                 plot_losses(
-                    all_losses, 
-                    x_label=f"Iteration of # Samples: {NUM_SAMPLE}, Mini Batch Size: {MINI_BATCH_SZ}", 
-                    y_label="ABC", 
+                    all_losses,
+                    x_label=f"Iteration of # Samples: {NUM_SAMPLE}, Mini Batch Size: {MINI_BATCH_SZ}",
+                    y_label="ABC",
                     filename=NAME
                 )
                 torch.save({'weights': encoder.state_dict()},
                            f"{path}{NAME}_encoder.path.tar")
                 torch.save({'weights': decoder.state_dict()},
                            f"{path}{NAME}_decoder.path.tar")
+
+                # Zero out metrics
+                total_log_prob_sum = 0.0
+                distance = 0.0
 
 
 def get_summary_stats_tensor(noised: list, clean: list):
@@ -209,7 +219,8 @@ encoder_opt = torch.optim.Adam(encoder.parameters(), lr=LR)
 
 if OBS_FILE is not None:
     obs_df = pd.read_csv(OBS_FILE)
-    obs_stats_sum_tensor = get_summary_stats_tensor(list(obs_df['Noised']), list(obs_df['Correct']))
+    obs_stats_sum_tensor = get_summary_stats_tensor(
+        list(obs_df['Noised']), list(obs_df['Correct']))
 else:
     obs_stats_sum_tensor = torch.FloatTensor([1.8526e-01, 2.6551e-01, 5.4923e-01, 5.4276e-01, 2.2182e-04, 1.5038e-02,
                                               5.1833e-01, 2.9150e-02, 4.8918e-01, 2.2695e-01, 2.9138e-01]).to(DEVICE)
