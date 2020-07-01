@@ -13,7 +13,7 @@ parser.add_argument('--config', help='Config json CONFIG_NAME',
 parser.add_argument('--k', help='Number of width for beam search',
                     nargs='?', default=6, type=int)
 parser.add_argument('--name', help='Name to test one',
-                    nargs='?', default='Jinsoo', type=str)
+                    nargs='?', default='Jason', type=str)
 
 args = parser.parse_args()
 CONFIG_NAME = args.config
@@ -105,7 +105,6 @@ def test_sample(x: list):
 
     return name
 
-
 def test_w_beam(x: list):
     name_length = len(x[0])
 
@@ -167,6 +166,4 @@ def get_levenshtein_beam_winner(name: str):
 
     return get_levenshtein_winner(noised_strs, name)
 
-
-for i in range(10):
-    print(test_sample([NAME]))
+print(test_sample([NAME]))

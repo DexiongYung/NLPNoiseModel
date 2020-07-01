@@ -30,7 +30,7 @@ parser.add_argument('--num_layers', help='Number of layers',
 parser.add_argument('--train_file', help='File to train on',
                     nargs='?', default='Data/Name/Firsts.csv', type=str)
 parser.add_argument('--obs_file', help='File to observation summary statistics on',
-                    nargs='?', default='Data/mispelled_pure_noised.csv', type=str)
+                    nargs='?', default=None, type=str)
 parser.add_argument('--column', help='Column header of data',
                     nargs='?', default='name', type=str)
 parser.add_argument('--print', help='Print every',
@@ -86,13 +86,13 @@ def sample_model(x: list):
         lstm_probs, hidden = decoder.forward(lstm_input, hidden)
         categorical = torch.distributions.Categorical(
             probs=lstm_probs.squeeze().exp())
-        samples = categorical.sample()
-        log_prob_sum += categorical.log_prob(samples).sum()
+        sample = categorical.sample()
+        log_prob_sum += categorical.log_prob(sample).sum()
 
         for j in range(MINI_BATCH_SZ):
-            names[j] += CHARACTERS[samples[j].item()]
+            names[j] += CHARACTERS[sample[j].item()]
 
-        lstm_input = samples.unsqueeze(0)
+        lstm_input = sample.unsqueeze(0)
 
     return names, log_prob_sum
 
@@ -100,8 +100,7 @@ def sample_model(x: list):
 def iterate_train(dl: DataLoader, path: str = "Checkpoints/"):
     all_losses = []
     num_model_iterations = 0
-    total_log_prob_sum = 0.0
-    distance = 0.0
+    scores_list = []
 
     for epoch_index in range(1, ITER + 1):
         for batch_index, x in enumerate(dl):
@@ -118,15 +117,15 @@ def iterate_train(dl: DataLoader, path: str = "Checkpoints/"):
             # Get summary stats of batch
             sample_stats_sum_tensor = get_summary_stats_tensor(noised_list, x)
 
-            # Sum objective function values
-            total_log_prob_sum += log_prob_sum
-            distance += torch.dist(sample_stats_sum_tensor,
+            # Score batch
+            distance = torch.dist(sample_stats_sum_tensor,
                                    obs_stats_sum_tensor, p=2).detach()
+            score = distance * log_prob_sum
+            scores_list.append(score)
 
             if batch_index % NUM_SAMPLE == 0:
-                # Let the gradient flow through REINFORCE loss without changing the visible loss (distance) and divide by number of samples
-                reinforce_loss = (1/NUM_SAMPLE) * (distance + (distance *
-                                                               total_log_prob_sum) - (distance * total_log_prob_sum).detach())
+                # Multiply be -1 because doing gradient descent 
+                reinforce_loss = -1 * torch.mean(torch.FloatTensor(scores_list))
                 reinforce_loss.backward()
 
                 encoder_opt.step()
@@ -148,8 +147,7 @@ def iterate_train(dl: DataLoader, path: str = "Checkpoints/"):
                            f"{path}{NAME}_decoder.path.tar")
 
                 # Zero out metrics
-                total_log_prob_sum = 0.0
-                distance = 0.0
+                scores_list = []
 
 
 def get_summary_stats_tensor(noised: list, clean: list):
