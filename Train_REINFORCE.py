@@ -40,7 +40,7 @@ parser.add_argument('--num_sample', help='Number of samples for gradient evaluat
 parser.add_argument('--mini_batch', help='Mini batch size',
                     nargs='?', default=32, type=int)
 parser.add_argument('--continue_training', help='Boolean whether to continue training an existing model', nargs='?',
-                    default=False, type=bool)
+                    default=True, type=bool)
 
 # Parse optional args from command line and save the configurations into a JSON file
 args = parser.parse_args()
