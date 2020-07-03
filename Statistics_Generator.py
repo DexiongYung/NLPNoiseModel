@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 from collections import Counter
 from Utilities.Distance import *
 from Utilities.Plot import *
+from Constants import *
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -16,6 +17,26 @@ if __name__ == "__main__":
 
     df = pandas.read_csv(file_path)
 
+def get_summary_stats_tensor(noised: list, clean: list):
+    ins_probs, del_probs, sub_probs = get_edit_distributions_percents(
+        noised, clean)
+    noise_outside_clean_probs = get_percent_of_noise_outside_clean(
+        clean, noised)
+    digits_outside_clean_probs = get_percent_of_digit_noise_outside_clean(
+        clean, noised)
+    punc_outside_clean_probs = get_percent_of_punc_noise_outside_clean(
+        clean, noised)
+    alpha_outside_clean_probs = get_percent_of_alpha_noise_outside_clean(
+        clean, noised)
+    upper_outside_clean_probs = get_percent_of_upper_alpha_noise_outside_clean(
+        clean, noised)
+    lower_outside_clean_probs = get_percent_of_lower_alpha_noise_outside_clean(
+        clean, noised)
+    vowel_outside_clean_probs = get_percent_of_vowel_noise_outside_clean(
+        clean, noised)
+    consonants_outside_clean_probs = get_percent_of_consonants_noise_outside_clean(
+        clean, noised)
+    return torch.FloatTensor([ins_probs, del_probs, sub_probs, noise_outside_clean_probs, digits_outside_clean_probs, punc_outside_clean_probs, alpha_outside_clean_probs, upper_outside_clean_probs, lower_outside_clean_probs, vowel_outside_clean_probs, consonants_outside_clean_probs]).to(DEVICE)
 
 def get_levenshtein_stats(noiseds: list, cleans: list):
     clean_len = len(cleans)
