@@ -30,7 +30,7 @@ parser.add_argument('--num_layers', help='Number of layers',
 parser.add_argument('--train_file', help='File to train on',
                     nargs='?', default='Data/Name/Firsts.csv', type=str)
 parser.add_argument('--obs_file', help='File to observation summary statistics on',
-                    nargs='?', default=None, type=str)
+                    nargs='?', default='Data/mispelled_pure_noised.csv', type=str)
 parser.add_argument('--column', help='Column header of data',
                     nargs='?', default='name', type=str)
 parser.add_argument('--print', help='Print every',
