@@ -69,6 +69,7 @@ PAD_IDX = CHARACTERS.index(PAD)
 
 def sample_model(x: list):
     log_prob_sum = 0
+    minibatch_len = len(x)
     padded_len = len(max(x, key=len))
 
     padded_x = list(map(lambda s: [char for char in s] +
@@ -78,8 +79,8 @@ def sample_model(x: list):
 
     hidden = encoder.forward(src, lng)
 
-    lstm_input = targetTensor([SOS] * MINI_BATCH_SZ, 1, CHARACTERS).to(DEVICE)
-    names = [''] * MINI_BATCH_SZ
+    lstm_input = targetTensor([SOS] * minibatch_len, 1, CHARACTERS).to(DEVICE)
+    names = [''] * minibatch_len
 
     # padded_len + 1 since as length of word increases the Levenshtein distance size goes down
     for i in range(padded_len + 1):
@@ -89,7 +90,7 @@ def sample_model(x: list):
         sample = categorical.sample()
         log_prob_sum += categorical.log_prob(sample).sum()
 
-        for j in range(MINI_BATCH_SZ):
+        for j in range(minibatch_len):
             names[j] += CHARACTERS[sample[j].item()]
 
         lstm_input = sample.unsqueeze(0)
