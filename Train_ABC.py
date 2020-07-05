@@ -92,7 +92,7 @@ def train(x: list):
         loss += criterion(lstm_probs[0], trg[i])
         lstm_input = trg[i].unsqueeze(0)
 
-    return loss.item(), names
+    return loss, names
 
 
 def iter_train(dl: DataLoader, path: str = "Checkpoints/"):
@@ -104,7 +104,6 @@ def iter_train(dl: DataLoader, path: str = "Checkpoints/"):
         for x in dl:
             count = count + 1
             loss, names = train(x)
-            obs_stats = get_summary_stats_tensor(x[1], x[0])
             samples_stats = get_summary_stats_tensor(names, x[0])
             distance = torch.dist(samples_stats, obs_stats, p=2).detach()
             loss_list.append(distance * loss)
@@ -114,7 +113,7 @@ def iter_train(dl: DataLoader, path: str = "Checkpoints/"):
                 decoder_opt.zero_grad()
 
                 loss = (1/SAMPLE_NUM) * \
-                    torch.mean(torch.FloatTensor(loss_list))
+                    torch.stack(loss_list).mean()
                 loss_list = []
                 loss.backward()
 
@@ -163,6 +162,7 @@ decoder_opt = torch.optim.Adam(decoder.parameters(), lr=LR)
 encoder_opt = torch.optim.Adam(encoder.parameters(), lr=LR)
 
 df = pd.read_csv(TRAIN_FILE)
+obs_stats = get_summary_stats_tensor(df.Noised.tolist(), df.Correct.tolist())
 ds = WordDataset(df)
 dl = DataLoader(ds, batch_size=BATCH_SZ, shuffle=True)
 

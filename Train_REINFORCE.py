@@ -123,9 +123,9 @@ def iterate_train(dl: DataLoader, path: str = "Checkpoints/"):
             score = distance * log_prob_sum
             scores_list.append(score)
 
-            if batch_index % NUM_SAMPLE == 0:
+            if (batch_index + 1) % NUM_SAMPLE == 0:
                 # Multiply be -1 because doing gradient descent 
-                reinforce_loss = -1 * torch.mean(torch.FloatTensor(scores_list))
+                reinforce_loss = -1 * torch.stack(scores_list).mean()
                 reinforce_loss.backward()
 
                 encoder_opt.step()
