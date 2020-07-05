@@ -36,11 +36,11 @@ parser.add_argument('--column', help='Column header of data',
 parser.add_argument('--print', help='Print every',
                     nargs='?', default=1, type=int)
 parser.add_argument('--num_sample', help='Number of samples for gradient evaluation',
-                    nargs='?', default=32, type=int)
+                    nargs='?', default=64, type=int)
 parser.add_argument('--mini_batch', help='Mini batch size',
-                    nargs='?', default=32, type=int)
+                    nargs='?', default=64, type=int)
 parser.add_argument('--continue_training', help='Boolean whether to continue training an existing model', nargs='?',
-                    default=True, type=bool)
+                    default=False, type=bool)
 
 # Parse optional args from command line and save the configurations into a JSON file
 args = parser.parse_args()
