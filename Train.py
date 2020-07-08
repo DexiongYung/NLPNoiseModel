@@ -14,7 +14,7 @@ from Dataset.WordDataset import WordDataset
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--name', help='Name of the Session',
-                    nargs='?', default='noise', type=str)
+                    nargs='?', default='noise_new', type=str)
 parser.add_argument('--hidden_size', help='Size of the hidden layer of LSTM',
                     nargs='?', default=256, type=int)
 parser.add_argument('--embed_dim', help='Size of embedding dimension',
@@ -26,7 +26,7 @@ parser.add_argument('--num_iter', help='Number of iterations',
 parser.add_argument('--num_layers', help='Number of layers',
                     nargs='?', default=5, type=int)
 parser.add_argument('--train_file', help='File to train on',
-                    nargs='?', default='Data/mispelled_best.csv', type=str)
+                    nargs='?', default='Data/mispelled_pure_noised.csv', type=str)
 parser.add_argument('--column', help='Column header of data',
                     nargs='?', default='name', type=str)
 parser.add_argument('--print', help='Print every',
@@ -34,7 +34,7 @@ parser.add_argument('--print', help='Print every',
 parser.add_argument('--batch', help='Batch size',
                     nargs='?', default=256, type=int)
 parser.add_argument('--continue_training', help='Boolean whether to continue training an existing model', nargs='?',
-                    default=True, type=bool)
+                    default=False, type=bool)
 
 # Parse optional args from command line and save the configurations into a JSON file
 args = parser.parse_args()
@@ -50,9 +50,7 @@ COLUMN = args.column
 PRINTS = args.print
 CLIP = 1
 
-CHARACTERS = [c for c in string.printable] + \
-    [chr(i) for i in range(1000, 1100)] + [chr(i)
-                                           for i in range(0x0021, 0x02FF)] + ['’', '‘', '€'] + [SOS, PAD, EOS]
+CHARACTERS = [c for c in string.printable] + [SOS, PAD, EOS]
 NUM_CHARS = len(CHARACTERS)
 PAD_IDX = CHARACTERS.index(PAD)
 
