@@ -14,7 +14,7 @@ from Dataset.WordDataset import WordDataset
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--name', help='Name of the Session',
-                    nargs='?', default='noise_new', type=str)
+                    nargs='?', default='noise_ascii_letters', type=str)
 parser.add_argument('--hidden_size', help='Size of the hidden layer of LSTM',
                     nargs='?', default=256, type=int)
 parser.add_argument('--embed_dim', help='Size of embedding dimension',
@@ -50,7 +50,7 @@ COLUMN = args.column
 PRINTS = args.print
 CLIP = 1
 
-CHARACTERS = [c for c in string.printable] + [SOS, PAD, EOS]
+CHARACTERS = [c for c in string.ascii_letters] + [SOS, PAD, EOS]
 NUM_CHARS = len(CHARACTERS)
 PAD_IDX = CHARACTERS.index(PAD)
 
@@ -143,6 +143,9 @@ decoder_opt = torch.optim.Adam(decoder.parameters(), lr=LR)
 encoder_opt = torch.optim.Adam(encoder.parameters(), lr=LR)
 
 df = pd.read_csv(TRAIN_FILE)
+df = df.dropna()
+df["Noised"] = df["Noised"].apply(lambda x: ''.join(["" if i not in CHARACTERS else i for i in x]))
+df["Correct"] = df["Correct"].apply(lambda x: ''.join(["" if i not in CHARACTERS else i for i in x]))
 ds = WordDataset(df)
 dl = DataLoader(ds, batch_size=BATCH_SZ, shuffle=True)
 

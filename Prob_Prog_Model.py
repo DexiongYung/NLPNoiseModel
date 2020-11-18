@@ -136,7 +136,7 @@ def sample_insertion_edit(char: str, chars_in_word: list):
     for c in chars_in_word:
         if c is char and c in string.ascii_lowercase:
             categorical[all_chars.index(c)] = (1/2) * char_within_word_perc
-        elif c is char and c in string.ascii_uppercase: 
+        elif c is char and c in string.ascii_uppercase:
             categorical[all_chars.index(c)] = 0
         else:
             categorical[all_chars.index(c)] = (1/2) * (
@@ -185,8 +185,7 @@ def noise_name(name: str):
     noised_name = ''
     char_list = [c for c in name]
     num_edits = sample_number_edits(name_len)
-    char_edit_probs = torch.FloatTensor(
-        [calculate_char_edit_probs(num_edits, name_len)])
+    char_edit_probs = torch.FloatTensor([num_edits/ name_len])
 
     edit_cate_dist = torch.FloatTensor(edit[f'edit_cate_{name_len}'])
 
@@ -208,7 +207,3 @@ def noise_name(name: str):
             noised_name += curr_char
 
     return noised_name
-
-
-for i in range(10):
-    print(noise_name('Jinsoo'))

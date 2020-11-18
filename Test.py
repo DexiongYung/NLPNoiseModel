@@ -6,6 +6,8 @@ from Utilities.Convert import *
 from Utilities.Distance import *
 from Utilities.Search import *
 from Model.Seq2Seq import Encoder, Decoder
+from Prob_Prog_Model import sample_number_edits
+from Statistics import *
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--config', help='Config json CONFIG_NAME',
@@ -13,7 +15,7 @@ parser.add_argument('--config', help='Config json CONFIG_NAME',
 parser.add_argument('--k', help='Number of width for beam search',
                     nargs='?', default=6, type=int)
 parser.add_argument('--name', help='Name to test one',
-                    nargs='?', default='Lomachenko', type=str)
+                    nargs='?', default='Dylan', type=str)
 
 args = parser.parse_args()
 CONFIG_NAME = args.config
@@ -46,10 +48,9 @@ encoder.eval()
 decoder.eval()
 
 
+
 def test_argmax(x: list):
     name_length = len(x[0])
-
-    src_x = [c for c in x[0]]
 
     src = indexTensor(x, name_length, input).to(DEVICE)
     lng = lengthTensor(x).to(DEVICE)
@@ -166,5 +167,73 @@ def get_levenshtein_beam_winner(name: str):
 
     return get_levenshtein_winner(noised_strs, name)
 
+def mixture_noising(name: str):
+    name_len = len(name)
+    noised_name = ''
+
+    # Get uniform char probs of edit
+    num_edits = sample_number_edits(name_len)
+    char_edit_probs = torch.FloatTensor([float(num_edits/ name_len)])
+
+    # Forward Name through Encoder
+    src = indexTensor([name], len(name), input).to(DEVICE)
+    lng = lengthTensor([name]).to(DEVICE)
+    hidden = encoder.forward(src, lng)
+
+    # Forward SOS through decoder with Encoder hidden state
+    lstm_input = targetTensor([SOS], 1, output).to(DEVICE)
+    out_probs, hidden = decoder.forward(lstm_input, hidden)
+
+    # Get edit type categorical distribution
+    edit_cate_dist = torch.FloatTensor(edit[f'edit_cate_{name_len}'])
+
+    for i in range(name_len):
+        # Sample if edit
+        is_edit = bool(torch.distributions.Bernoulli(
+            char_edit_probs).sample().item())
+        curr_char = name[i]
+
+        if is_edit:
+            # Sample edit type, 0 = insert, 1 = del, 2 = sub
+            edit_type = int(torch.distributions.Categorical(
+                edit_cate_dist).sample().item())
+
+            if edit_type is 0:
+                # Add current char and push through LSTM
+                noised_name = noised_name + curr_char
+                lstm_input = targetTensor([curr_char], 1, output).to(DEVICE)
+                out_probs, hidden = decoder.forward(lstm_input, hidden)
+
+                # Sample inserted char
+                out_probs[0][0][output.index(EOS)] = 0.0
+                sampled_char = output[torch.distributions.Categorical(out_probs).sample().item()]
+                noised_name += sampled_char
+
+                # Forward inserted char through model
+                lstm_input = targetTensor([sampled_char], 1, output).to(DEVICE)
+                out_probs, hidden = decoder.forward(lstm_input, hidden)
+            elif edit_type is 2:
+                # Substitution
+
+                # Zero out EOS and current char
+                out_probs[0][0][output.index(EOS)] = 0.0
+                out_probs[0][0][output.index(curr_char)] = 0.0
+
+                # Sample sub char
+                sampled_char = output[torch.distributions.Categorical(out_probs).sample().item()]
+                noised_name += sampled_char
+                
+                # Forward sample
+                lstm_input = targetTensor([sampled_char], 1, output).to(DEVICE)
+                out_probs, hidden = decoder.forward(lstm_input, hidden)
+        else:
+            noised_name += curr_char
+
+            # Forward current character through LSTM
+            lstm_input = targetTensor([curr_char], 1, output).to(DEVICE)
+            out_probs, hidden = decoder.forward(lstm_input, hidden)
+
+    return noised_name
+
 for i in range(10):
-    print(test_sample([NAME]))
+    print(mixture_noising(NAME))
